@@ -32,7 +32,7 @@ class IotsState(AutomatonState):
                   for output, states in self.inputs.items() for state in states]
         result = result if output is None else list(
             filter(lambda elm: elm[0] == output, result))
-        result = result if destination in None else list(
+        result = result if destination is None else list(
             filter(lambda elm: elm[1] == destination, result))
 
         return result
