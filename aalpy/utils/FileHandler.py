@@ -1,11 +1,10 @@
 from aalpy.base import Automaton
-from aalpy.automata.IotsMachine import IotsMachine
 import os
 
 from pydot import Dot, Node, Edge, graph_from_dot_file
 
 from aalpy.automata import Dfa, MooreMachine, Mdp, Onfsm, MealyState, DfaState, MooreState, MealyMachine, \
-    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IotsState
+    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IotsState, IotsMachine
 
 file_types = ['dot', 'png', 'svg', 'pdf', 'string']
 automaton_types = ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm']
