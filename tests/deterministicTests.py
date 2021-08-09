@@ -9,8 +9,8 @@ from aalpy.oracles import WMethodEqOracle, RandomWalkEqOracle, StatePrefixEqOrac
 from aalpy.utils import get_Angluin_dfa, load_automaton_from_file
 
 correct_automata = {Dfa: get_Angluin_dfa(),
-                    MealyMachine: load_automaton_from_file('../DotModels/Angluin_Mealy.dot', automaton_type='mealy'),
-                    MooreMachine: load_automaton_from_file('../DotModels/Angluin_Moore.dot', automaton_type='moore')}
+                    MealyMachine: load_automaton_from_file('./DotModels/Angluin_Mealy.dot', automaton_type='mealy'),
+                    MooreMachine: load_automaton_from_file('./DotModels/Angluin_Moore.dot', automaton_type='moore')}
 
 suls = {Dfa: DfaSUL,
         MealyMachine: MealySUL,

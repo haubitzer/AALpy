@@ -1,3 +1,4 @@
+from aalpy.base import Automaton
 from aalpy.automata.IotsMachine import IotsMachine
 import os
 
@@ -166,126 +167,132 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
     """
     graph = graph_from_dot_file(path)[0]
 
-    def node_type(automaton_type):
+    def get_class_information(automaton_type):
         if automaton_type == 'dfa':
-            return DfaState
+            return (DfaState, Dfa)
         elif automaton_type == 'mealy':
-            return MealyState
+            return (MealyState, MealyMachine)
         elif automaton_type == 'moore':
-            return MooreState
+            return (MooreState, MooreMachine)
         elif automaton_type == 'mdp':
-            return MdpState
+            return (MdpState, Mdp)
         elif automaton_type == 'smm':
-            return StochasticMealyState
+            return (StochasticMealyState, StochasticMealyMachine)
         elif automaton_type == 'onfsm':
-            return OnfsmState
+            return (OnfsmState, Onfsm)
         elif automaton_type == 'iots':
-            return IotsState
+            return (IotsState, IotsMachine)
         else:
-            assert False
+            assert False, "Automaton type is unknown"
 
-    node = node_type(automaton_type)
+    def create_node_label_dict(graph: list, node_class):
+        result = dict()
 
-    node_label_dict = dict()
-    for n in graph.get_node_list():
-        if n.get_name() == '__start0' or n.get_name() == '':
-            continue
-        label = None
-        if 'label' in n.get_attributes().keys():
-            label = n.get_attributes()['label']
-            label = _process_label(label)
+        for n in graph.get_node_list():
+            node_name = None
+            label = None
+            output = None
 
-        node_name = n.get_name()
-        output = None
-        if automaton_type == 'moore' and label != "":
-            label_output = _process_label(label)
-            label = label_output.split('|')[0]
-            output = label_output.split('|')[1]
-            output = int(output) if output.isdigit() else output
+            node_name = n.get_name()
+            if node_name == '__start0' or node_name == '':
+                continue
 
-        if automaton_type == 'mdp':
-            node_label_dict[node_name] = node(node_name, label)
-        else:
-            node_label_dict[node_name] = node(
-                label, output) if automaton_type == 'moore' else node(label)
+            if 'label' in n.get_attributes().keys():
+                label = _process_label(n.get_attributes()['label'])
 
-        if 'shape' in n.get_attributes().keys() and 'doublecircle' in n.get_attributes()['shape']:
-            node_label_dict[node_name].is_accepting = True
-
-    initial_node = None
-    for edge in graph.get_edge_list():
-        if edge.get_source() == '__start0':
-            initial_node = node_label_dict[edge.get_destination()]
-            continue
-        source = node_label_dict[edge.get_source()]
-        destination = node_label_dict[edge.get_destination()]
-        label = edge.get_attributes()['label']
-        label = _process_label(label)
-        if automaton_type == 'mealy':
-            inp = label.split('/')[0]
-            out = label.split('/')[1]
-            inp = int(inp) if inp.isdigit() else inp
-            out = int(out) if out.isdigit() else out
-            source.transitions[inp] = destination
-            source.output_fun[inp] = out
-        elif automaton_type == 'onfsm':
-            inp = label.split('/')[0]
-            out = label.split('/')[1]
-            inp = int(inp) if inp.isdigit() else inp
-            out = int(out) if out.isdigit() else out
-            source.transitions[inp].append((out, destination))
-        elif automaton_type == 'smm':
-            inp = label.split('/')[0]
-            out_prob = label.split('/')[1]
-            out = out_prob.split(':')[0]
-            prob = out_prob.split(':')[1]
-            inp = int(inp) if inp.isdigit() else inp
-            out = int(out) if out.isdigit() else out
-            source.transitions[inp].append((destination, out, float(prob)))
-        elif automaton_type == 'mdp':
-            inp = label.split(':')[0]
-            prob = label.split(':')[1]
-            inp = int(inp) if inp.isdigit() else inp
-            prob = float(prob)
-            source.transitions[inp].append((destination, prob))
-        elif automaton_type == 'iots':
-            if label.startswith('?'):
-                source.add_input(label, destination)
-            elif label.startswith('!'):
-                source.add_output(label, destination)
+            if node_class == MdpState:
+                result[node_name] = node_class(node_name, label)
+            elif node_class == MooreState:
+                label_output = _process_label(label)
+                label = label_output.split('|')[0]
+                output = label_output.split('|')[1]
+                output = int(output) if output.isdigit() else output
+                result[node_name] = node_class(label, output)
+            elif node_class == DfaState:
+                is_accepting_state = 'shape' in n.get_attributes().keys(
+                ) and 'doublecircle' in n.get_attributes()['shape']
+                result[node_name] = node_class(label, is_accepting_state)
             else:
-                # TODO add syntax rule to the wiki.
-                assert False, "No prefix found."
-        else:
-            source.transitions[int(label) if label.isdigit()
-                               else label] = destination
+                result[node_name] = node_class(label)
 
-    if initial_node is None:
+        return result
+
+    def get_initial_node(graph, node_label_dict: dict):
+        for edge in graph.get_edge_list():
+            if edge.get_source() == '__start0':
+                return node_label_dict[edge.get_destination()]
+
         print("No initial state found. \n"
               "Please follow syntax found at: https://github.com/DES-Lab/AALpy/wiki/"
               "Loading,Saving,-Syntax-and-Visualization-of-Automata ")
         assert False
 
-    if automaton_type == 'dfa':
-        automaton = Dfa(initial_node, list(node_label_dict.values()))
-    elif automaton_type == 'moore':
-        automaton = MooreMachine(initial_node, list(node_label_dict.values()))
-    elif automaton_type == 'mdp':
-        automaton = Mdp(initial_node, list(node_label_dict.values()))
-    elif automaton_type == 'smm':
-        automaton = StochasticMealyMachine(
-            initial_node, list(node_label_dict.values()))
-    elif automaton_type == 'onfsm':
-        automaton = Onfsm(initial_node, list(node_label_dict.values()))
-    elif automaton_type == 'iots':
-        automaton = IotsMachine(initial_node, list(node_label_dict.values()))
-    else:
-        automaton = MealyMachine(initial_node, list(node_label_dict.values()))
-    assert automaton.is_input_complete()
-    if compute_prefixes:
-        for state in automaton.states:
-            state.prefix = automaton.get_shortest_path(
-                automaton.initial_state, state)
+    def update_nodes(graph, node_label_dict: dict, inital_node):
+        for edge in graph.get_edge_list():
+
+            if edge.get_source() == '__start0':
+                continue
+
+            source = node_label_dict[edge.get_source()]
+            destination = node_label_dict[edge.get_destination()]
+            label = _process_label(edge.get_attributes()['label'])
+
+            if isinstance(source, MealyState):
+                inp = label.split('/')[0]
+                out = label.split('/')[1]
+                inp = int(inp) if inp.isdigit() else inp
+                out = int(out) if out.isdigit() else out
+                source.transitions[inp] = destination
+                source.output_fun[inp] = out
+            elif isinstance(source, OnfsmState):
+                inp = label.split('/')[0]
+                out = label.split('/')[1]
+                inp = int(inp) if inp.isdigit() else inp
+                out = int(out) if out.isdigit() else out
+                source.transitions[inp].append((out, destination))
+            elif isinstance(source, StochasticMealyState):
+                inp = label.split('/')[0]
+                out_prob = label.split('/')[1]
+                out = out_prob.split(':')[0]
+                prob = out_prob.split(':')[1]
+                inp = int(inp) if inp.isdigit() else inp
+                out = int(out) if out.isdigit() else out
+                source.transitions[inp].append((destination, out, float(prob)))
+            elif isinstance(source, MdpState):
+                inp = label.split(':')[0]
+                prob = label.split(':')[1]
+                inp = int(inp) if inp.isdigit() else inp
+                prob = float(prob)
+                source.transitions[inp].append((destination, prob))
+            elif isinstance(source, IotsState):
+                if label.startswith('?'):
+                    source.add_input(label, destination)
+                elif label.startswith('!'):
+                    source.add_output(label, destination)
+                else:
+                    assert False, "No prefix found."
+            else:
+                label = int(label) if label.isdigit() else label
+                source.transitions[label] = destination
+
+    def build_automaton(automaton_class, node_label_dict, initial_node, compute_prefixes: bool):
+        states = list(node_label_dict.values())
+        automaton: Automaton = automaton_class(initial_node, states)
+
+        assert automaton.is_input_complete()
+
+        if compute_prefixes:
+            for state in automaton.states:
+                state.prefix = automaton.get_shortest_path(
+                    automaton.initial_state, state)
+
+    (node_class, automaton_class) = get_class_information(automaton_type)
+    node_label_dict = create_node_label_dict(graph, node_class)
+    initial_node = get_initial_node(graph, node_label_dict)
+    update_nodes(graph, node_label_dict, initial_node)
+    automaton = build_automaton(
+        automaton_class, node_label_dict, initial_node, compute_prefixes)
+
     return automaton
 
 
