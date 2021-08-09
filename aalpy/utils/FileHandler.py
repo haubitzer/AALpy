@@ -183,7 +183,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         else:
             assert False, "Automaton type is unknown"
 
-    def create_node_label_dict(graph: list, node_class):
+    def create_state_label_dict(graph: list, node_class):
         result = dict()
 
         for n in graph.get_node_list():
@@ -215,24 +215,24 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
 
         return result
 
-    def get_initial_node(graph, node_label_dict: dict):
+    def get_initial_state(graph, state_label_dict: dict):
         for edge in graph.get_edge_list():
             if edge.get_source() == '__start0':
-                return node_label_dict[edge.get_destination()]
+                return state_label_dict[edge.get_destination()]
 
         print("No initial state found. \n"
               "Please follow syntax found at: https://github.com/DES-Lab/AALpy/wiki/"
               "Loading,Saving,-Syntax-and-Visualization-of-Automata ")
         assert False
 
-    def update_nodes(graph, node_label_dict: dict, inital_node):
+    def update_states(graph, state_label_dict: dict):
         for edge in graph.get_edge_list():
 
             if edge.get_source() == '__start0':
                 continue
 
-            source = node_label_dict[edge.get_source()]
-            destination = node_label_dict[edge.get_destination()]
+            source = state_label_dict[edge.get_source()]
+            destination = state_label_dict[edge.get_destination()]
             label = _process_label(edge.get_attributes()['label'])
 
             if isinstance(source, MealyState):
@@ -273,9 +273,9 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                 label = int(label) if label.isdigit() else label
                 source.transitions[label] = destination
 
-    def build_automaton(automaton_class, node_label_dict, initial_node, compute_prefixes: bool):
-        states = list(node_label_dict.values())
-        automaton: Automaton = automaton_class(initial_node, states)
+    def build_automaton(automaton_class, state_label_dict, initial_state, compute_prefixes: bool):
+        states = list(state_label_dict.values())
+        automaton: Automaton = automaton_class(initial_state, states)
 
         assert automaton.is_input_complete()
 
@@ -286,13 +286,13 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
 
         return automaton
 
-    (node_class, automaton_class) = get_class_information(automaton_type)
-    node_label_dict = create_node_label_dict(graph, node_class)
-    initial_node = get_initial_node(graph, node_label_dict)
-    update_nodes(graph, node_label_dict, initial_node)
+    (state_class, automaton_class) = get_class_information(automaton_type)
+    state_label_dict = create_state_label_dict(graph, state_class)
+    initial_state = get_initial_state(graph, state_label_dict)
+    update_states(graph, state_label_dict)
 
     return build_automaton(
-        automaton_class, node_label_dict, initial_node, compute_prefixes)
+        automaton_class, state_label_dict, initial_state, compute_prefixes)
 
 
 def _process_label(label: str) -> str:
