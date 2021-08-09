@@ -7,7 +7,6 @@ from aalpy.automata import Dfa, MooreMachine, Mdp, Onfsm, MealyState, DfaState, 
     MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IotsState, IotsMachine
 
 file_types = ['dot', 'png', 'svg', 'pdf', 'string']
-automaton_types = ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm']
 
 
 def visualize_automaton(automaton, path="LearnedModel", file_type='pdf', display_same_state_trans=True):
