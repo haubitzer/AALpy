@@ -1,9 +1,10 @@
+from aalpy.automata.IotsMachine import IotsMachine
 import os
 
 from pydot import Dot, Node, Edge, graph_from_dot_file
 
 from aalpy.automata import Dfa, MooreMachine, Mdp, Onfsm, MealyState, DfaState, MooreState, MealyMachine, \
-    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState
+    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IotsState
 
 file_types = ['dot', 'png', 'svg', 'pdf', 'string']
 automaton_types = ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm']
@@ -146,7 +147,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         path: path to the file
 
         automaton_type: type of the automaton, if not specified it will be automatically determined according,
-            one of ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm']
+            one of ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm', iots]
 
         compute_prefixes: it True, shortest path to reach every state will be computed and saved in the prefix of
             the state. Useful when loading the model to use them as a equivalence oracle. (Default value = False)
@@ -157,12 +158,25 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
     """
     graph = graph_from_dot_file(path)[0]
 
-    assert automaton_type in automaton_types
+    def node_type(automaton_type):
+            if automaton_type == 'dfa':
+                return DfaState
+            elif automaton_type == 'mealy':
+                return MealyState
+            elif automaton_type == 'moore':
+                return MooreState
+            elif automaton_type == 'mdp':
+                return MdpState
+            elif automaton_type == 'smm':
+                return StochasticMealyState
+            elif automaton_type == 'onfsm':
+                return OnfsmState
+            elif automaton_type == 'iots':
+                return IotsState
+            else:
+                assert False
 
-    node = MealyState if automaton_type == 'mealy' else DfaState if automaton_type == 'dfa' else MooreState
-    node = MdpState if automaton_type == 'mdp' else StochasticMealyState if automaton_type == 'smm' else node
-    node = OnfsmState if automaton_type == 'onfsm' else node
-    assert node is not None
+    node = node_type(automaton_type)
 
     node_label_dict = dict()
     for n in graph.get_node_list():
@@ -225,6 +239,14 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
             inp = int(inp) if inp.isdigit() else inp
             prob = float(prob)
             source.transitions[inp].append((destination, prob))
+        elif automaton_type == 'iots':
+            if label.startswith('?'):
+                source.add_input(label, destination)
+            elif label.startswith('!'):
+                source.add_output(label, destination)
+            else:
+                # TODO add syntax rule to the wiki.
+                assert False, "No prefix found."
         else:
             source.transitions[int(label) if label.isdigit() else label] = destination
 
@@ -244,6 +266,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         automaton = StochasticMealyMachine(initial_node, list(node_label_dict.values()))
     elif automaton_type == 'onfsm':
         automaton = Onfsm(initial_node, list(node_label_dict.values()))
+    elif automaton_type == 'iots':
+        automaton = IotsMachine(initial_node, list(node_label_dict.values()))
     else:
         automaton = MealyMachine(initial_node, list(node_label_dict.values()))
     assert automaton.is_input_complete()
