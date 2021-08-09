@@ -286,14 +286,15 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                 state.prefix = automaton.get_shortest_path(
                     automaton.initial_state, state)
 
+        return automaton
+
     (node_class, automaton_class) = get_class_information(automaton_type)
     node_label_dict = create_node_label_dict(graph, node_class)
     initial_node = get_initial_node(graph, node_label_dict)
     update_nodes(graph, node_label_dict, initial_node)
-    automaton = build_automaton(
-        automaton_class, node_label_dict, initial_node, compute_prefixes)
 
-    return automaton
+    return build_automaton(
+        automaton_class, node_label_dict, initial_node, compute_prefixes)
 
 
 def _process_label(label: str) -> str:
