@@ -17,18 +17,24 @@ class IotsState(AutomatonState):
     def get_inputs(self, input: string = None, destination: IotsState = None) -> list:
         assert input.startswith('?')
 
-        result = [(input, state) for input, states in self.inputs.items() for state in states]
-        result = result if input is None else list(filter(lambda elm: elm[0] == input, result)) 
-        result = result if destination in None else list(filter(lambda elm: elm[1] == destination, result))
+        result = [(input, state)
+                  for input, states in self.inputs.items() for state in states]
+        result = result if input is None else list(
+            filter(lambda elm: elm[0] == input, result))
+        result = result if destination in None else list(
+            filter(lambda elm: elm[1] == destination, result))
 
         return result
 
     def get_outputs(self, output: string = None, destination: IotsState = None) -> list:
         assert output.startswith('!')
 
-        result = [(output, state) for output, states in self.inputs.items() for state in states]
-        result = result if output is None else list(filter(lambda elm: elm[0] == output, result)) 
-        result = result if destination in None else list(filter(lambda elm: elm[1] == destination, result))
+        result = [(output, state)
+                  for output, states in self.inputs.items() for state in states]
+        result = result if output is None else list(
+            filter(lambda elm: elm[0] == output, result))
+        result = result if destination in None else list(
+            filter(lambda elm: elm[1] == destination, result))
 
         return result
 
@@ -59,8 +65,10 @@ class IotsState(AutomatonState):
         return not bool(self.outputs)
 
     def is_determistic(self) -> bool:
-        determistic_input = all(len(states) == 1 for states in self.inputs.itervalues())
-        determistic_output = all(len(states) == 1 for states in self.outputs.itervalues())
+        determistic_input = all(
+            len(states) == 1 for states in self.inputs.itervalues())
+        determistic_output = all(
+            len(states) == 1 for states in self.outputs.itervalues())
         return determistic_input and determistic_output
 
 
@@ -78,10 +86,10 @@ class IotsMachine(Automaton):
         Next step is determined based on a uniform distribution over all transitions with the input 'letter'.
         """
 
-        # TODO 
+        # TODO
         # I am not sure if the step() function should also work for outputs given by the caller,
         # so the user can chose if the automaton steps on an input or output edge. Maybe we trigger
-        # always an output on the destination state, this would works very well if we restrict 
+        # always an output on the destination state, this would works very well if we restrict
         # the automaton to an strict input-output chain (Martin recommend that for the beginning).
 
         assert input.startswith('?')
@@ -94,4 +102,3 @@ class IotsMachine(Automaton):
 
         assert input.startswith('!')
         (_, self.current_state) = choice(self.current_state.get_outputs(input))
-    

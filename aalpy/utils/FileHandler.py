@@ -29,7 +29,8 @@ def visualize_automaton(automaton, path="LearnedModel", file_type='pdf', display
     """
     print('Visualization started in the background thread.')
     if len(automaton.states) >= 25:
-        print(f'Visualizing {len(automaton.states)} state automaton could take some time.')
+        print(
+            f'Visualizing {len(automaton.states)} state automaton could take some time.')
 
     import threading
     visualization_thread = threading.Thread(target=save_automaton_to_file, name="Visualization",
@@ -71,7 +72,8 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
     graph = Dot(path, graph_type='digraph')
     for state in automaton.states:
         if is_dfa and state.is_accepting:
-            graph.add_node(Node(state.state_id, label=state.state_id, shape='doublecircle'))
+            graph.add_node(
+                Node(state.state_id, label=state.state_id, shape='doublecircle'))
         elif is_moore:
             graph.add_node(Node(state.state_id, label=f'{state.state_id}|{state.output}',
                                 shape='record', style='rounded'))
@@ -86,34 +88,40 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
                 new_state = state.transitions[i]
                 if not display_same_state_trans and new_state.state_id == state.state_id:
                     continue
-                graph.add_edge(Edge(state.state_id, new_state.state_id, label=f'{i}/{state.output_fun[i]}'))
+                graph.add_edge(
+                    Edge(state.state_id, new_state.state_id, label=f'{i}/{state.output_fun[i]}'))
             elif is_mdp:
                 # here we do not have single state, but a list of (State, probability) tuples
                 new_state = state.transitions[i]
                 for s in new_state:
                     if not display_same_state_trans and s[0].state_id == state.state_id:
                         continue
-                    graph.add_edge(Edge(state.state_id, s[0].state_id, label=f'{i} : {round(s[1], 2)}'))
+                    graph.add_edge(
+                        Edge(state.state_id, s[0].state_id, label=f'{i} : {round(s[1], 2)}'))
             elif is_onsfm:
                 new_state = state.transitions[i]
                 for s in new_state:
                     if not display_same_state_trans and state.state_id == s[1].state_id:
                         continue
-                    graph.add_edge(Edge(state.state_id, s[1].state_id, label=f'{i}/{s[0]}'))
+                    graph.add_edge(
+                        Edge(state.state_id, s[1].state_id, label=f'{i}/{s[0]}'))
             elif is_smm:
                 new_state = state.transitions[i]
                 for s in new_state:
                     if not display_same_state_trans and s[0].state_id == state.state_id:
                         continue
-                    graph.add_edge(Edge(state.state_id, s[0].state_id, label=f'{i}/{s[1]}:{round(s[2], 2)}'))
+                    graph.add_edge(
+                        Edge(state.state_id, s[0].state_id, label=f'{i}/{s[1]}:{round(s[2], 2)}'))
             else:
                 new_state = state.transitions[i]
                 if not display_same_state_trans and new_state.state_id == state.state_id:
                     continue
-                graph.add_edge(Edge(state.state_id, new_state.state_id, label=f'{i}'))
+                graph.add_edge(
+                    Edge(state.state_id, new_state.state_id, label=f'{i}'))
 
     graph.add_node(Node('__start0', shape='none', label=''))
-    graph.add_edge(Edge('__start0', automaton.initial_state.state_id, label=''))
+    graph.add_edge(
+        Edge('__start0', automaton.initial_state.state_id, label=''))
 
     if file_type == 'string':
         return graph.to_string()
@@ -159,22 +167,22 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
     graph = graph_from_dot_file(path)[0]
 
     def node_type(automaton_type):
-            if automaton_type == 'dfa':
-                return DfaState
-            elif automaton_type == 'mealy':
-                return MealyState
-            elif automaton_type == 'moore':
-                return MooreState
-            elif automaton_type == 'mdp':
-                return MdpState
-            elif automaton_type == 'smm':
-                return StochasticMealyState
-            elif automaton_type == 'onfsm':
-                return OnfsmState
-            elif automaton_type == 'iots':
-                return IotsState
-            else:
-                assert False
+        if automaton_type == 'dfa':
+            return DfaState
+        elif automaton_type == 'mealy':
+            return MealyState
+        elif automaton_type == 'moore':
+            return MooreState
+        elif automaton_type == 'mdp':
+            return MdpState
+        elif automaton_type == 'smm':
+            return StochasticMealyState
+        elif automaton_type == 'onfsm':
+            return OnfsmState
+        elif automaton_type == 'iots':
+            return IotsState
+        else:
+            assert False
 
     node = node_type(automaton_type)
 
@@ -198,7 +206,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         if automaton_type == 'mdp':
             node_label_dict[node_name] = node(node_name, label)
         else:
-            node_label_dict[node_name] = node(label, output) if automaton_type == 'moore' else node(label)
+            node_label_dict[node_name] = node(
+                label, output) if automaton_type == 'moore' else node(label)
 
         if 'shape' in n.get_attributes().keys() and 'doublecircle' in n.get_attributes()['shape']:
             node_label_dict[node_name].is_accepting = True
@@ -248,7 +257,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                 # TODO add syntax rule to the wiki.
                 assert False, "No prefix found."
         else:
-            source.transitions[int(label) if label.isdigit() else label] = destination
+            source.transitions[int(label) if label.isdigit()
+                               else label] = destination
 
     if initial_node is None:
         print("No initial state found. \n"
@@ -263,7 +273,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
     elif automaton_type == 'mdp':
         automaton = Mdp(initial_node, list(node_label_dict.values()))
     elif automaton_type == 'smm':
-        automaton = StochasticMealyMachine(initial_node, list(node_label_dict.values()))
+        automaton = StochasticMealyMachine(
+            initial_node, list(node_label_dict.values()))
     elif automaton_type == 'onfsm':
         automaton = Onfsm(initial_node, list(node_label_dict.values()))
     elif automaton_type == 'iots':
@@ -273,7 +284,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
     assert automaton.is_input_complete()
     if compute_prefixes:
         for state in automaton.states:
-            state.prefix = automaton.get_shortest_path(automaton.initial_state, state)
+            state.prefix = automaton.get_shortest_path(
+                automaton.initial_state, state)
     return automaton
 
 
