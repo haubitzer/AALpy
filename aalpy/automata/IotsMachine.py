@@ -20,7 +20,7 @@ class IotsState(AutomatonState):
                   for input, states in self.inputs.items() for state in states]
         result = result if input is None else list(
             filter(lambda elm: elm[0] == input, result))
-        result = result if destination in None else list(
+        result = result if destination is None else list(
             filter(lambda elm: elm[1] == destination, result))
 
         return result
@@ -41,9 +41,9 @@ class IotsState(AutomatonState):
         assert input.startswith('?')
 
         if input in self.inputs:
-            self.inputs.update({input: tuple(new_state) + self.inputs[input]})
+            self.inputs.update({input: tuple([new_state]) + self.inputs[input]})
         else:
-            self.inputs.update({input: tuple(new_state)})
+            self.inputs.update({input: tuple([new_state])})
 
     def add_output(self, output: string, new_state):
         assert output.startswith('!')
@@ -52,7 +52,7 @@ class IotsState(AutomatonState):
             self.outputs.update(
                 {input: tuple(new_state) + self.outputs[output]})
         else:
-            self.outputs.update({input: tuple(new_state)})
+            self.outputs.update({input: tuple([new_state])})
 
     def is_quiescence(self) -> bool:
         """
@@ -65,9 +65,9 @@ class IotsState(AutomatonState):
 
     def is_determistic(self) -> bool:
         determistic_input = all(
-            len(states) == 1 for states in self.inputs.itervalues())
+            len(states) == 1 for states in self.inputs.values())
         determistic_output = all(
-            len(states) == 1 for states in self.outputs.itervalues())
+            len(states) == 1 for states in self.outputs.values())
         return determistic_input and determistic_output
 
 
