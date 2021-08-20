@@ -101,20 +101,49 @@ class IotsMachine(Automaton):
         """
 
         assert input.startswith('?')
+        result: list[str] = []
 
-        result = []
+        print(self.current_state.inputs)
 
-        transitions = self.current_state.get_inputs(input)
+        print(self.current_state.is_input_enabled())
 
-        if not transitions:
+        def input_step(input: str):
+            transitions = self.current_state.get_inputs(input)
+            if not transitions:
+                return None
+
+            (key, self.current_state) = choice(transitions)
+            return key
+
+        def output_step(output: str = None):
+            transitions = self.current_state.get_outputs(output)
+            if not transitions:
+                return None
+
+            (key, self.current_state) = choice(transitions)
+            return key
+
+        input_key = input_step(input)
+
+        if input_key is None:
             return None
 
-        (_, self.current_state) = choice(transitions)
+        print(self.current_state.is_input_enabled())
 
-        while not self.current_state.is_input_enabled():
-            # TODO what happens when it never stops? because of an loop. 
-            (output, self.current_state) = choice(self.current_state.get_outputs())
-            result.append(output)
+        visited = []
+        while True:
+
+            if self.current_state.is_input_enabled():
+                break
+
+            if self.current_state.is_quiescence():
+                break
+
+            if self.current_state in visited:
+                break
+
+            visited.append(self.current_state)
+            result.append(output_step())
 
         return result
 
@@ -127,7 +156,7 @@ class IotsMachine(Automaton):
             result.extend([input for input, _ in state.get_inputs()])
 
         return list(set(result))
-     
+
     def get_output_alphabet(self) -> list:
         """
         Returns the output alphabet
