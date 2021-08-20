@@ -40,20 +40,16 @@ class IotsState(AutomatonState):
     def add_input(self, input: string, new_state: IotsState):
         assert input.startswith('?')
 
-        if input in self.inputs:
-            self.inputs.update(
-                {input: tuple([new_state]) + self.inputs[input]})
-        else:
-            self.inputs.update({input: tuple([new_state])})
+        new_value = tuple(new_state) + self.inputs[input] if input in self.inputs else tuple([new_state])
+        self.outputs.update({input: new_value})
+        self.transitions.update(self.outputs)
 
     def add_output(self, output: string, new_state):
         assert output.startswith('!')
 
-        if output in self.outputs:
-            self.outputs.update(
-                {input: tuple(new_state) + self.outputs[output]})
-        else:
-            self.outputs.update({input: tuple([new_state])})
+        new_value = tuple(new_state) + self.outputs[output] if output in self.outputs else tuple([new_state])
+        self.outputs.update({output: new_value})
+        self.transitions.update(self.outputs)
 
     def is_quiescence(self) -> bool:
         """
