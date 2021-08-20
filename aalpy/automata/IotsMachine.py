@@ -14,7 +14,7 @@ class IotsState(AutomatonState):
         self.outputs = defaultdict(tuple)
 
     def get_inputs(self, input: string = None, destination: IotsState = None) -> list:
-        assert input.startswith('?')
+        assert input is None or input.startswith('?')
 
         result = [(input, state)
                   for input, states in self.inputs.items() for state in states]
@@ -26,7 +26,7 @@ class IotsState(AutomatonState):
         return result
 
     def get_outputs(self, output: string = None, destination: IotsState = None) -> list:
-        assert output.startswith('!')
+        assert output is None or output.startswith('!')
 
         result = [(output, state)
                   for output, states in self.inputs.items() for state in states]
@@ -91,6 +91,6 @@ class IotsMachine(Automaton):
         assert input.startswith('?')
         (_, self.current_state) = choice(self.current_state.get_inputs(input))
 
-    def step_output(self, output: string == None):
-        assert output.startswith('!')
+    def step_output(self, output: string = None):
+        assert output is None or output.startswith('!')
         (_, self.current_state) = choice(self.current_state.get_outputs(output))
