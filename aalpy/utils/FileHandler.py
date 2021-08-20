@@ -67,6 +67,7 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
     is_mdp = isinstance(automaton, Mdp)
     is_onsfm = isinstance(automaton, Onfsm)
     is_smm = isinstance(automaton, StochasticMealyMachine)
+    is_iots = isinstance(automaton, IotsMachine)
 
     graph = Dot(path, graph_type='digraph')
     for state in automaton.states:
@@ -111,6 +112,13 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
                         continue
                     graph.add_edge(
                         Edge(state.state_id, s[0].state_id, label=f'{i}/{s[1]}:{round(s[2], 2)}'))
+            elif is_iots:
+                new_state = state.transitions[i]
+                for s in new_state:
+                    if not display_same_state_trans and s[0].state_id == state.state_id:
+                        continue
+                    graph.add_edge(
+                        Edge(state.state_id, s.state_id, label=f'{i}'))
             else:
                 new_state = state.transitions[i]
                 if not display_same_state_trans and new_state.state_id == state.state_id:
