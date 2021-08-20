@@ -285,7 +285,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         states = list(state_label_dict.values())
         automaton: Automaton = automaton_class(initial_state, states)
 
-        assert automaton.is_input_complete()
+        assert automaton.is_input_complete() or automaton_class is IotsMachine
 
         if compute_prefixes:
             for state in automaton.states:
