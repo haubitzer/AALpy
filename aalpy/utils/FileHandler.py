@@ -171,33 +171,30 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
       automaton
 
     """
-    graph = graph_from_dot_file(path)[0]
 
     def get_class_information(automaton_type):
         if automaton_type == 'dfa':
-            return (DfaState, Dfa)
+            return DfaState, Dfa
         elif automaton_type == 'mealy':
-            return (MealyState, MealyMachine)
+            return MealyState, MealyMachine
         elif automaton_type == 'moore':
-            return (MooreState, MooreMachine)
+            return MooreState, MooreMachine
         elif automaton_type == 'mdp':
-            return (MdpState, Mdp)
+            return MdpState, Mdp
         elif automaton_type == 'smm':
-            return (StochasticMealyState, StochasticMealyMachine)
+            return StochasticMealyState, StochasticMealyMachine
         elif automaton_type == 'onfsm':
-            return (OnfsmState, Onfsm)
+            return OnfsmState, Onfsm
         elif automaton_type == 'iots':
-            return (IotsState, IotsMachine)
+            return IotsState, IotsMachine
         else:
             assert False, "Automaton type is unknown"
 
-    def create_state_label_dict(graph: list, node_class):
+    def create_state_label_dict(graph: Dot, node_class):
         result = dict()
 
         for n in graph.get_node_list():
-            node_name = None
             label = None
-            output = None
 
             node_name = n.get_name()
             if node_name == '__start0' or node_name == '':
@@ -294,6 +291,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
 
         return automaton
 
+    graph: Dot = graph_from_dot_file(path)[0]
     (state_class, automaton_class) = get_class_information(automaton_type)
     state_label_dict = create_state_label_dict(graph, state_class)
     initial_state = get_initial_state(graph, state_label_dict)

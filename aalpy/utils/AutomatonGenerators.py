@@ -194,7 +194,9 @@ def generate_random_ONFSM(num_states, num_inputs, num_outputs, multiple_out_prob
 
     return Onfsm(states[0], states)
 
-def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per_state=1, max_num_output_per_state = 1, deterministic=True) -> IotsMachine:
+
+def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per_state=1, max_num_outputs_per_state=1,
+                         deterministic=True) -> IotsMachine:
     """
     Randomly generate an input-output-tansition-system machine.
 
@@ -207,6 +209,7 @@ def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per
       num_outputs: number of outputs
       max_num_inputs_per_state: maximal number of inputs per state (Default value = 1)
       max_num_outputs_per_state: maximal number of outputs per state (Default value = 1)
+      deterministic: if true the automata is deterministic if false the automata may be non-deterministic
      
     Returns:
 
@@ -218,25 +221,23 @@ def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per
     states = [IotsState(f's{i}') for i in range(num_states)]
 
     for state in states:
-            while True:
-                num_state_inputs = random.randint(0, max_num_inputs_per_state)
-                num_state_outputs = random.randint(0, max_num_output_per_state)
+        while True:
+            num_state_inputs = random.randint(0, max_num_inputs_per_state)
+            num_state_outputs = random.randint(0, max_num_outputs_per_state)
 
-                if num_state_inputs <= 1:
-                    break
+            if num_state_inputs <= 1:
+                break
 
-                if num_state_outputs != 0:
-                    break
+            if num_state_outputs != 0:
+                break
 
-            if deterministic:
-                for input in random.sample(inputs, num_state_inputs):
-                    state.add_input(input, random.choice(states))
-            
-                for output in random.sample(outputs, num_state_outputs):
-                    state.add_output(output, random.choice(states))
-            else:
-                raise "Not implemented yet"
+        if deterministic:
+            for input in random.sample(inputs, num_state_inputs):
+                state.add_input(input, random.choice(states))
 
-            
+            for output in random.sample(outputs, num_state_outputs):
+                state.add_output(output, random.choice(states))
+        else:
+            raise Exception("Not implemented yet")
 
     return IotsMachine(states[0], states)
