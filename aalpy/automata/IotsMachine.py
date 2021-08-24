@@ -1,7 +1,9 @@
 from __future__ import annotations
-from collections import OrderedDict, defaultdict
-from random import choice
+
 import string
+from collections import defaultdict
+from copy import deepcopy
+from random import choice
 
 from aalpy.base import Automaton, AutomatonState
 
@@ -12,6 +14,8 @@ class IotsState(AutomatonState):
         # Note: inputs/outputs maps to tuples of possible new state e.g. input => (state1, state2)
         self.inputs = defaultdict(tuple)
         self.outputs = defaultdict(tuple)
+        # Note: workaround for ioco
+        self.ioco_status = None
 
     def get_inputs(self, input: string = None, destination: IotsState = None) -> list[tuple[str, IotsState]]:
         assert input is None or input.startswith('?')
@@ -41,7 +45,7 @@ class IotsState(AutomatonState):
         assert input.startswith('?')
 
         new_value = tuple(
-            new_state) + self.inputs[input] if input in self.inputs else tuple([new_state])
+            [new_state]) + self.inputs[input] if input in self.inputs else tuple([new_state])
         self.inputs.update({input: new_value})
         self.transitions.update(self.inputs)
 
@@ -58,9 +62,12 @@ class IotsState(AutomatonState):
         A state is input enabled if an input can trigger an transition.
 
         Returns:
-            bool: inputenabled flag
+            bool: input enabled flag
         """
-        return bool(self.inputs)
+        return any(self.inputs.values())
+
+    def is_input_enabled_for_diff_state(self) -> bool:
+        return all(self not in states for states in self.inputs.values())
 
     def is_quiescence(self) -> bool:
         """
@@ -69,14 +76,14 @@ class IotsState(AutomatonState):
         Returns:
             bool: quiescence flag
         """
-        return not bool(self.outputs)
+        return not any(self.outputs.values())
 
-    def is_determistic(self) -> bool:
-        determistic_input = all(
+    def is_deterministic(self) -> bool:
+        deterministic_input = all(
             len(states) == 1 for states in self.inputs.values())
-        determistic_output = all(
+        deterministic_output = all(
             len(states) == 1 for states in self.outputs.values())
-        return determistic_input and determistic_output
+        return deterministic_input and deterministic_output
 
 
 class IotsMachine(Automaton):
@@ -87,9 +94,10 @@ class IotsMachine(Automaton):
     def __init__(self, initial_state: IotsState, states: list[IotsState]):
         super().__init__(initial_state, states)
         self.current_state: IotsState
+        self.initial_state: IotsState
         self.states: list[IotsState]
 
-    def step(self, input: string) -> list[str]:
+    def step(self, input: string) -> None:
         """
         Next step is determined based on a uniform distribution over all transitions with the input 'letter'.
 
@@ -102,10 +110,7 @@ class IotsMachine(Automaton):
 
         assert input.startswith('?')
         result: list[str] = []
-
-        print(self.current_state.inputs)
-
-        print(self.current_state.is_input_enabled())
+        visited = []
 
         def input_step(input: str):
             transitions = self.current_state.get_inputs(input)
@@ -123,14 +128,9 @@ class IotsMachine(Automaton):
             (key, self.current_state) = choice(transitions)
             return key
 
-        input_key = input_step(input)
-
-        if input_key is None:
+        if input_step(input) is None:
             return None
 
-        print(self.current_state.is_input_enabled())
-
-        visited = []
         while True:
 
             if self.current_state.is_input_enabled():
@@ -166,3 +166,99 @@ class IotsMachine(Automaton):
             result.extend([output for output, _ in state.get_outputs()])
 
         return list(set(result))
+
+
+class IocoValidator:
+
+    def __init__(self, specification: IotsMachine):
+        self.specification: IotsMachine = deepcopy(specification)
+
+        self.states = []
+        self.visited = []
+        self.state_count = 0
+
+        self.initial_state = self._new_test_state()
+        self._resolve_state(self.specification.initial_state, self.initial_state)
+
+        self.automata: IotsMachine = IotsMachine(self.initial_state, self.states)
+
+    def _new_test_state(self):
+        self.state_count += 1
+        state = IotsState(f't{self.state_count}')
+        state.ioco_status = "test"
+        self.states.append(state)
+        return state
+
+    def _new_passed_state(self):
+        state = self._new_test_state()
+        state.ioco_status = "passed"
+
+        state.state_id += " passed"
+        return state
+
+    def _new_failed_state(self):
+        state = self._new_test_state()
+        state.ioco_status = "failed"
+
+        state.state_id += " failed"
+        return state
+
+    def _resolve_state(self, original_state: IotsState, test_state: IotsState):
+        self.visited.append(original_state)
+
+        follow_state = dict()
+
+        for input in self.specification.get_input_alphabet():
+            states = original_state.inputs[input]
+
+            # TODO can a input go to a passed stated? or does it need to go to quiescence state first.
+            # TODO can an output follow and output without and input between or vis versa.
+            # TODO can the test case have two quiescence transition to the passed state?
+
+            if not states:
+                test_state.add_output(input.replace("?", "!"), self._new_failed_state())
+            else:
+                new_test_state = self._new_test_state()
+                result = self._resolve_outputs(new_test_state, states)
+
+                follow_state.update(result)
+                test_state.add_output(input.replace("?", "!"), new_test_state)
+
+        self._resolve_outputs(test_state, [original_state])
+
+        for specification_state, ioco_state in follow_state.items():
+            if specification_state not in self.visited:
+                self._resolve_state(specification_state, ioco_state)
+
+    def _resolve_outputs(self, test_state, states) -> dict:
+        follow_state = dict()
+        for destination in states:
+
+            if destination.is_quiescence() and destination.is_input_enabled_for_diff_state() and destination not in self.visited:
+                new_test_state = self._new_test_state()
+                test_state.add_input("?quiescence", new_test_state)
+                follow_state.update({destination: new_test_state})
+            elif destination.is_quiescence() and destination.is_input_enabled_for_diff_state():
+                test_state.add_input("?quiescence", self._new_passed_state())
+            else:
+                test_state.add_input("?quiescence", self._new_failed_state())
+
+            for output in self.specification.get_output_alphabet():
+                transitions = destination.outputs[output]
+
+                if not transitions:
+                    test_state.add_input(output.replace("!", "?"), self._new_failed_state())
+
+                for state in transitions:
+                    if state.is_quiescence() and not state.is_input_enabled_for_diff_state():
+                        test_state.add_input(output.replace("!", "?"), self._new_passed_state())
+                    else:
+                        new_test_state = self._new_test_state()
+                        test_state.add_input(output.replace("!", "?"), new_test_state)
+                        follow_state.update({state: new_test_state})
+
+        return follow_state
+
+    def check(self, sut: IotsMachine) -> bool:
+
+        return False
