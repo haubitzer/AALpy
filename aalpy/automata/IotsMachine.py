@@ -4,6 +4,7 @@ import string
 from collections import defaultdict
 from copy import deepcopy
 from random import choice
+from typing import Optional
 
 from aalpy.base import Automaton, AutomatonState
 
@@ -97,7 +98,7 @@ class IotsMachine(Automaton):
         self.initial_state: IotsState
         self.states: list[IotsState]
 
-    def step(self, input: string) -> None:
+    def step(self, letter: string, destination: IotsState = None) -> Optional[str]:
         """
         Next step is determined based on a uniform distribution over all transitions with the input 'letter'.
 
@@ -108,44 +109,49 @@ class IotsMachine(Automaton):
         the automaton to an strict input-output chain (Martin recommend that for the beginning).
         """
 
-        assert input.startswith('?')
-        result: list[str] = []
-        visited = []
-
-        def input_step(input: str):
-            transitions = self.current_state.get_inputs(input)
+        def input_step(input: str, destination) -> Optional[str]:
+            transitions = self.current_state.get_inputs(input, destination)
             if not transitions:
                 return None
 
             (key, self.current_state) = choice(transitions)
             return key
 
-        def output_step(output: str = None):
-            transitions = self.current_state.get_outputs(output)
+        def output_step(output: str, destination) -> Optional[str]:
+            transitions = self.current_state.get_outputs(output, destination)
             if not transitions:
                 return None
 
             (key, self.current_state) = choice(transitions)
             return key
 
-        if input_step(input) is None:
-            return None
+        if letter.startswith("?"):
+            return input_step(letter, destination)
 
-        while True:
+        if letter.startswith("!"):
+            return output_step(letter, destination)
 
-            if self.current_state.is_input_enabled():
-                break
+        raise Exception("Unable to match letter")
 
-            if self.current_state.is_quiescence():
-                break
-
-            if self.current_state in visited:
-                break
-
-            visited.append(self.current_state)
-            result.append(output_step())
-
-        return result
+        ###
+        #   result: list[str] = []
+        #   visited = []
+        #
+        #     while True:
+        #
+        #     if self.current_state.is_input_enabled():
+        #         break
+        #
+        #     if self.current_state.is_quiescence():
+        #         break
+        #
+        #     if self.current_state in visited:
+        #         break
+        #
+        #     visited.append(self.current_state)
+        #     result.append(output_step())
+        #
+        # return result
 
     def get_input_alphabet(self) -> list:
         """
@@ -166,6 +172,54 @@ class IotsMachine(Automaton):
             result.extend([output for output, _ in state.get_outputs()])
 
         return list(set(result))
+
+    def get_shortest_path(self, origin_state: AutomatonState, target_state: AutomatonState) -> tuple:
+        """
+        Breath First Search over the automaton
+
+        Args:
+
+            origin_state (AutomatonState): state from which the BFS will start
+            target_state (AutomatonState): state that will be reached with the return value
+
+        Returns:
+
+            sequence of inputs that lead from origin_state to target state
+
+        """
+        if origin_state not in self.states or target_state not in self.states:
+            raise SystemExit("State not in the automaton.")
+
+        explored = []
+        queue = [[origin_state]]
+
+        if origin_state == target_state:
+            return ()
+
+        while queue:
+            path = queue.pop(0)
+            node = path[-1]
+            if node not in explored:
+                neighbours = node.transitions.values()
+                for neighbour in neighbours:
+                    # TODO get non-deterministic neighbours 
+                    neighbour = neighbour[0]
+                    new_path = list(path)
+                    new_path.append(neighbour)
+                    queue.append(new_path)
+                    # return path if neighbour is goal
+                    if neighbour == target_state:
+                        acc_seq = new_path[:-1]
+                        inputs = []
+                        for ind, state in enumerate(acc_seq):
+                            inputs.append(next(key for key, value in state.transitions.items()
+                                               # TODO get non-deterministic neighbours 
+                                               if value[0] == new_path[ind + 1]))
+                        return tuple(inputs)
+
+                # mark node as explored
+                explored.append(node)
+        return ()
 
 
 class IocoValidator:
@@ -192,14 +246,12 @@ class IocoValidator:
     def _new_passed_state(self):
         state = self._new_test_state()
         state.ioco_status = "passed"
-
         state.state_id += " passed"
         return state
 
     def _new_failed_state(self):
         state = self._new_test_state()
         state.ioco_status = "failed"
-
         state.state_id += " failed"
         return state
 
@@ -210,10 +262,6 @@ class IocoValidator:
 
         for input in self.specification.get_input_alphabet():
             states = original_state.inputs[input]
-
-            # TODO can a input go to a passed stated? or does it need to go to quiescence state first.
-            # TODO can an output follow and output without and input between or vis versa.
-            # TODO can the test case have two quiescence transition to the passed state?
 
             if not states:
                 test_state.add_output(input.replace("?", "!"), self._new_failed_state())
@@ -260,5 +308,114 @@ class IocoValidator:
         return follow_state
 
     def check(self, sut: IotsMachine) -> bool:
+        for state in self.automata.states:
+            if state.ioco_status == "test":
+                continue
 
-        return False
+            shortest_path = list(self.automata.get_shortest_path(self.automata.initial_state, state))
+            resolved_paths = self.resolve_non_deterministic(sut, sut.initial_state.state_id, shortest_path, None, [])
+            flattened_paths = self.flatten_resolved_paths(resolved_paths)
+
+            ioco_violation = not all(self.path_check(sut, path, state, list(shortest_path)) for path in flattened_paths)
+
+            if ioco_violation:
+                return False
+
+        return True
+
+    def resolve_non_deterministic(self, sut: IotsMachine, current_state_id: str, path: list, destination_id: str,
+                                  resolved_path: list):
+        sut.reset_to_initial()
+        sut.current_state = sut.get_state_by_id(current_state_id)
+
+        if destination_id is not None:
+            letter = path.pop(0)
+            destination = sut.get_state_by_id(destination_id)
+
+            if letter == "?quiescence":
+                pass
+            elif letter.startswith("?"):
+                sut.step(letter.replace("?", "!"), destination)
+            elif letter.startswith("!"):
+                sut.step(letter.replace("!", "?"), destination)
+
+            resolved_path.append((letter, sut.current_state.state_id))
+
+        if not path:
+            return resolved_path
+
+        next_letter = path[0]
+        current_state_id = sut.current_state.state_id
+        possible_destinations = []
+
+        if next_letter == "?quiescence":
+            possible_destinations = [(next_letter, sut.current_state)]
+        elif next_letter.startswith("?"):
+            possible_destinations = sut.current_state.get_outputs(next_letter.replace("?", '!'))
+        elif next_letter.startswith("!"):
+            possible_destinations = sut.current_state.get_inputs(next_letter.replace("!", '?'))
+
+        if not possible_destinations:
+            resolved_path.append((next_letter, None))
+            return resolved_path
+
+        resolved_path_list = [self.resolve_non_deterministic(sut,
+                                                             current_state_id,
+                                                             path.copy(),
+                                                             destination.state_id,
+                                                             resolved_path.copy())
+                              for _, destination in possible_destinations]
+
+        return resolved_path_list
+
+    def flatten_resolved_paths(self, resolved_paths: list) -> list:
+        result = []
+
+        if not resolved_paths:
+            return result
+
+        if type(resolved_paths[0]) is tuple:
+            return [resolved_paths]
+
+        for item in resolved_paths:
+            flatted_item = self.flatten_resolved_paths(item)
+            if flatted_item and type(flatted_item[0]) is tuple:
+                result.append(flatted_item)
+            elif flatted_item:
+                result.extend(flatted_item)
+
+        return result
+
+    def path_check(self, sut, path: list, ioco_state: IotsState, shortes_path: list):
+        sut.reset_to_initial()
+        valid_outputs = [key.replace("?", "!") for key in self.automata.get_input_alphabet()]
+
+        for idx, (letter, destination_id) in enumerate(path):
+            destination = sut.get_state_by_id(destination_id)
+
+            is_input = letter.startswith("!")
+            is_quiescence = letter == "?quiescence"
+            is_output = letter.startswith("?") and not is_quiescence
+
+            accepted_input = is_input and bool(sut.step(letter.replace("!", "?"), destination))
+            accepted_output = is_output and bool(sut.step(letter.replace("?", "!"), destination))
+            accepted_quiescence = is_quiescence and sut.current_state.is_quiescence()
+
+            accepted_any = accepted_input or accepted_output or accepted_quiescence
+
+            is_last_letter = (idx + 1) == len(shortes_path)
+            expect_passed = is_last_letter and ioco_state.ioco_status == "passed"
+            expect_failed = is_last_letter and ioco_state.ioco_status == "failed"
+
+            violation_on_expect_passed = expect_passed and not accepted_quiescence
+            violation_on_expect_failed = expect_failed and accepted_any
+
+            invalid_output = any(output not in valid_outputs for output, _ in sut.current_state.get_outputs())
+
+            if invalid_output or violation_on_expect_passed or violation_on_expect_failed:
+                return False
+
+            if not accepted_any:
+                break
+
+        return True
