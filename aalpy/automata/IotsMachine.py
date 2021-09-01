@@ -100,13 +100,9 @@ class IotsMachine(Automaton):
 
     def step(self, letter: string, destination: IotsState = None) -> Optional[str]:
         """
-        Next step is determined based on a uniform distribution over all transitions with the input 'letter'.
+        Next step is determined based on a uniform distribution over all transitions with possible by the given 'letter'.
 
-        TODO
-        I am not sure if the step() function should also work for outputs given by the caller,
-        so the user can chose if the automaton steps on an input or output edge. Maybe we trigger
-        always an output on the destination state, this would works very well if we restrict
-        the automaton to an strict input-output chain (Martin recommend that for the beginning).
+        Returns the key if a successful transition was executed otherwise returns None
         """
 
         def input_step(input: str, destination) -> Optional[str]:
@@ -131,27 +127,8 @@ class IotsMachine(Automaton):
         if letter.startswith("!"):
             return output_step(letter, destination)
 
+        # Add support for step without requiring a letter from the caller
         raise Exception("Unable to match letter")
-
-        ###
-        #   result: list[str] = []
-        #   visited = []
-        #
-        #     while True:
-        #
-        #     if self.current_state.is_input_enabled():
-        #         break
-        #
-        #     if self.current_state.is_quiescence():
-        #         break
-        #
-        #     if self.current_state in visited:
-        #         break
-        #
-        #     visited.append(self.current_state)
-        #     result.append(output_step())
-        #
-        # return result
 
     def get_input_alphabet(self) -> list:
         """
@@ -308,23 +285,32 @@ class IocoValidator:
         return follow_state
 
     def check(self, sut: IotsMachine) -> bool:
+        """
+        Checks if the implementation is ioco to the specification ( i ioco s)
+
+        Args:
+            sut: the implementation a.k.a system under test
+
+        Returns: True if ioco holds False if ioco is violated
+
+        """
         for state in self.automata.states:
             if state.ioco_status == "test":
                 continue
 
             shortest_path = list(self.automata.get_shortest_path(self.automata.initial_state, state))
-            resolved_paths = self.resolve_non_deterministic(sut, sut.initial_state.state_id, shortest_path, None, [])
-            flattened_paths = self.flatten_resolved_paths(resolved_paths)
+            resolved_paths = self._resolve_non_deterministic(sut, sut.initial_state.state_id, shortest_path, None, [])
+            flattened_paths = self._flatten_resolved_paths(resolved_paths)
 
-            ioco_violation = not all(self.path_check(sut, path, state, list(shortest_path)) for path in flattened_paths)
+            ioco_violation = not all(self.evaluates_path(sut, path, state, shortest_path) for path in flattened_paths)
 
             if ioco_violation:
                 return False
 
         return True
 
-    def resolve_non_deterministic(self, sut: IotsMachine, current_state_id: str, path: list, destination_id: str,
-                                  resolved_path: list):
+    def _resolve_non_deterministic(self, sut: IotsMachine, current_state_id: str, path: list, destination_id: str,
+                                   resolved_path: list):
         sut.reset_to_initial()
         sut.current_state = sut.get_state_by_id(current_state_id)
 
@@ -359,16 +345,16 @@ class IocoValidator:
             resolved_path.append((next_letter, None))
             return resolved_path
 
-        resolved_path_list = [self.resolve_non_deterministic(sut,
-                                                             current_state_id,
-                                                             path.copy(),
-                                                             destination.state_id,
-                                                             resolved_path.copy())
+        resolved_path_list = [self._resolve_non_deterministic(sut,
+                                                              current_state_id,
+                                                              path.copy(),
+                                                              destination.state_id,
+                                                              resolved_path.copy())
                               for _, destination in possible_destinations]
 
         return resolved_path_list
 
-    def flatten_resolved_paths(self, resolved_paths: list) -> list:
+    def _flatten_resolved_paths(self, resolved_paths: list) -> list:
         result = []
 
         if not resolved_paths:
@@ -378,7 +364,7 @@ class IocoValidator:
             return [resolved_paths]
 
         for item in resolved_paths:
-            flatted_item = self.flatten_resolved_paths(item)
+            flatted_item = self._flatten_resolved_paths(item)
             if flatted_item and type(flatted_item[0]) is tuple:
                 result.append(flatted_item)
             elif flatted_item:
@@ -386,12 +372,12 @@ class IocoValidator:
 
         return result
 
-    def path_check(self, sut, path: list, ioco_state: IotsState, shortes_path: list):
+    def evaluates_path(self, sut: IotsMachine, path: list, ioco_state: IotsState, shortest_path: list):
         sut.reset_to_initial()
         valid_outputs = [key.replace("?", "!") for key in self.automata.get_input_alphabet()]
 
         for idx, (letter, destination_id) in enumerate(path):
-            destination = sut.get_state_by_id(destination_id)
+            destination: IotsState = sut.get_state_by_id(destination_id)
 
             is_input = letter.startswith("!")
             is_quiescence = letter == "?quiescence"
@@ -403,18 +389,21 @@ class IocoValidator:
 
             accepted_any = accepted_input or accepted_output or accepted_quiescence
 
-            is_last_letter = (idx + 1) == len(shortes_path)
+            # We only handle and check the expected ioco stat at the end of the path
+            is_last_letter = (idx + 1) == len(shortest_path)
             expect_passed = is_last_letter and ioco_state.ioco_status == "passed"
             expect_failed = is_last_letter and ioco_state.ioco_status == "failed"
 
             violation_on_expect_passed = expect_passed and not accepted_quiescence
             violation_on_expect_failed = expect_failed and accepted_any
-
+            
+            # If the test case triggers an output that is unknown to the specification, the implantation violates ioco.
             invalid_output = any(output not in valid_outputs for output, _ in sut.current_state.get_outputs())
 
             if invalid_output or violation_on_expect_passed or violation_on_expect_failed:
                 return False
-
+           
+            # If the implantation doesn't accepted the current letter, there is no reason to continue with the evaluation.
             if not accepted_any:
                 break
 
