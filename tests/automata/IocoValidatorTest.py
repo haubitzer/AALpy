@@ -10,6 +10,8 @@ test_cases = [
     ("../../DotModels/Iots/ioco/04_ioco_S.dot", "../../DotModels/Iots/ioco/04_ioco_P.dot", True),
     ("../../DotModels/Iots/ioco/05_ioco_S.dot", "../../DotModels/Iots/ioco/05_ioco_P.dot", True),
     ("../../DotModels/Iots/ioco/06_ioco_S.dot", "../../DotModels/Iots/ioco/06_ioco_P.dot", False),
+    ("../../DotModels/Iots/ioco/07_ioco_S.dot", "../../DotModels/Iots/ioco/07_ioco_P.dot", True),
+    ("../../DotModels/Iots/ioco/08_ioco_S.dot", "../../DotModels/Iots/ioco/08_ioco_P.dot", True),
 ]
 
 
