@@ -1,5 +1,5 @@
 from aalpy.base import SUL
-from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine
+from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IotsMachine, IotsState
 
 
 class DfaSUL(SUL):
@@ -144,3 +144,42 @@ class StochasticMealySUL(SUL):
 
     def step(self, letter):
         return self.smm.step(letter)
+
+
+class IotsMachineSUL(SUL):
+    def __init__(self, iots: IotsMachine):
+        super().__init__()
+        self.iots = iots
+
+    def pre(self):
+        self.iots.reset_to_initial()
+
+    def post(self):
+        pass
+
+    def step(self, letter):
+        if letter == "QUIESCENCE":
+            letter = "?quiescence"
+        return self.iots.step(letter)
+
+    def query(self, word: tuple) -> tuple[list, IotsState]:
+        self.pre()
+
+        middle_state = self.iots.initial_state
+        out = []
+        if not word:
+            word = ["?empty_word"]
+
+        for letter in word:
+            if letter.startswith("?") or letter == "QUIESCENCE":
+                output, middle_state = self.step(letter)
+                out.append(output)
+            if letter.startswith("!"):
+                self.iots.current_state = middle_state
+                output = self.iots.step_to(letter)
+                out.append(output)
+
+        self.post()
+        self.num_queries += 1
+        self.num_steps += len(word)
+        return out, middle_state

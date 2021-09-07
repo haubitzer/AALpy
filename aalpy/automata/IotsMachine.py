@@ -98,37 +98,43 @@ class IotsMachine(Automaton):
         self.initial_state: IotsState
         self.states: list[IotsState]
 
-    def step(self, letter: string, destination: IotsState = None) -> Optional[str]:
+    def step(self, letter):
+        # TODO what should happen if the state doesn't accept the given input?, should i
+        input = self._input_step_to(letter, None)
+        middle_state = self.current_state
+        output = self._output_step_to(None, None)
+        return output, middle_state
+
+    def step_to(self, letter: string, destination: IotsState = None) -> Optional[str]:
         """
         Next step is determined based on a uniform distribution over all transitions with possible by the given 'letter'.
 
-        Returns the key if a successful transition was executed otherwise returns None
+        Returns the letter if a successful transition was executed otherwise returns None
         """
 
-        def input_step(input: str, destination) -> Optional[str]:
-            transitions = self.current_state.get_inputs(input, destination)
-            if not transitions:
-                return None
-
-            (key, self.current_state) = choice(transitions)
-            return key
-
-        def output_step(output: str, destination) -> Optional[str]:
-            transitions = self.current_state.get_outputs(output, destination)
-            if not transitions:
-                return None
-
-            (key, self.current_state) = choice(transitions)
-            return key
-
         if letter.startswith("?"):
-            return input_step(letter, destination)
+            return self._input_step_to(letter, destination)
 
         if letter.startswith("!"):
-            return output_step(letter, destination)
+            return self._output_step_to(letter, destination)
 
-        # Add support for step without requiring a letter from the caller
         raise Exception("Unable to match letter")
+
+    def _input_step_to(self, input: str, destination) -> Optional[str]:
+        transitions = self.current_state.get_inputs(input, destination)
+        if not transitions:
+            return None
+
+        (key, self.current_state) = choice(transitions)
+        return key
+
+    def _output_step_to(self, output: Optional[str], destination) -> Optional[str]:
+        transitions = self.current_state.get_outputs(output, destination)
+        if not transitions:
+            return None
+
+        (key, self.current_state) = choice(transitions)
+        return key
 
     def get_input_alphabet(self) -> list:
         """
@@ -321,9 +327,9 @@ class IocoValidator:
             if letter == "?quiescence":
                 pass
             elif letter.startswith("?"):
-                sut.step(letter.replace("?", "!"), destination)
+                sut.step_to(letter.replace("?", "!"), destination)
             elif letter.startswith("!"):
-                sut.step(letter.replace("!", "?"), destination)
+                sut.step_to(letter.replace("!", "?"), destination)
 
             resolved_path.append((letter, sut.current_state.state_id))
 
@@ -383,8 +389,8 @@ class IocoValidator:
             is_quiescence = letter == "?quiescence"
             is_output = letter.startswith("?") and not is_quiescence
 
-            accepted_input = is_input and bool(sut.step(letter.replace("!", "?"), destination))
-            accepted_output = is_output and bool(sut.step(letter.replace("?", "!"), destination))
+            accepted_input = is_input and bool(sut.step_to(letter.replace("!", "?"), destination))
+            accepted_output = is_output and bool(sut.step_to(letter.replace("?", "!"), destination))
             accepted_quiescence = is_quiescence and sut.current_state.is_quiescence()
 
             accepted_any = accepted_input or accepted_output or accepted_quiescence
@@ -396,15 +402,35 @@ class IocoValidator:
 
             violation_on_expect_passed = expect_passed and not accepted_quiescence
             violation_on_expect_failed = expect_failed and accepted_any
-            
+
             # If the test case triggers an output that is unknown to the specification, the implantation violates ioco.
             invalid_output = any(output not in valid_outputs for output, _ in sut.current_state.get_outputs())
 
             if invalid_output or violation_on_expect_passed or violation_on_expect_failed:
                 return False
-           
+
             # If the implantation doesn't accepted the current letter, there is no reason to continue with the evaluation.
             if not accepted_any:
                 break
 
         return True
+
+class CompletenessOracle:
+
+    def __init__(self, automata: IotsMachine):
+        self.automata: IotsMachine = deepcopy(automata)
+
+
+    def get_state_after(self, word):
+        self.automata.reset_to_initial()
+
+        for letter in word:
+            self.automata.step(letter)
+
+        out = [self.step(letter) for letter in word]
+
+
+
+    def is_complete_after(self, word, cell):
+        pass
+
