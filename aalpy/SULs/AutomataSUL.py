@@ -1,5 +1,5 @@
 from aalpy.base import SUL
-from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine
+from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IoltsMachine, IoltsState
 
 
 class DfaSUL(SUL):
@@ -144,3 +144,56 @@ class StochasticMealySUL(SUL):
 
     def step(self, letter):
         return self.smm.step(letter)
+
+
+class IoltsMachineSUL(SUL):
+    def __init__(self, iolts: IoltsMachine):
+        super().__init__()
+        self.iolts = iolts
+
+    def pre(self):
+        self.iolts.reset_to_initial()
+
+    def post(self):
+        pass
+
+    def step(self, letter):
+        if letter == "QUIESCENCE":
+            letter = "?quiescence"
+        return self.iolts.step(letter)
+
+    def query(self, word: tuple) -> tuple[list, list]:
+        self.pre()
+
+        middle_state = self.iolts.current_state
+        outputs = []
+        possible_outputs = []
+        enable_diff_state = []
+
+        if not word:
+            possible_outputs.append([])
+            outputs.append(None)
+            enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
+
+        for letter in word:
+            if letter.startswith("?"):
+                output, middle_state = self.step(letter)
+                possible_outputs.append([key for key, _ in middle_state.get_outputs()])
+                enable_diff_state.append(middle_state.is_input_enabled_for_diff_state())
+                outputs.append(output)
+            if letter.startswith("!"):
+                self.iolts.current_state = middle_state
+                self.iolts.step_to(letter)
+                possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
+                enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
+                outputs.append(None)
+            if letter == 'QUIESCENCE':
+                possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
+                enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
+                outputs.append(None)
+
+
+        self.post()
+        self.num_queries += 1
+        self.num_steps += len(word)
+        return outputs, possible_outputs, enable_diff_state

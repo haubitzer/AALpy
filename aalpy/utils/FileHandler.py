@@ -4,7 +4,7 @@ import os
 from pydot import Dot, Node, Edge, graph_from_dot_file
 
 from aalpy.automata import Dfa, MooreMachine, Mdp, Onfsm, MealyState, DfaState, MooreState, MealyMachine, \
-    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IotsState, IotsMachine
+    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IoltsState, IoltsMachine
 
 file_types = ['dot', 'png', 'svg', 'pdf', 'string']
 
@@ -67,7 +67,7 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
     is_mdp = isinstance(automaton, Mdp)
     is_onsfm = isinstance(automaton, Onfsm)
     is_smm = isinstance(automaton, StochasticMealyMachine)
-    is_iots = isinstance(automaton, IotsMachine)
+    is_iolts = isinstance(automaton, IoltsMachine)
 
     graph = Dot(path, graph_type='digraph')
     for state in automaton.states:
@@ -112,7 +112,7 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
                         continue
                     graph.add_edge(
                         Edge(state.state_id, s[0].state_id, label=f'{i}/{s[1]}:{round(s[2], 2)}'))
-            elif is_iots:
+            elif is_iolts:
                 new_state = state.transitions[i]
                 for s in new_state:
                     if not display_same_state_trans and s[0].state_id == state.state_id:
@@ -162,7 +162,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         path: path to the file
 
         automaton_type: type of the automaton, if not specified it will be automatically determined according,
-            one of ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm', iots]
+            one of ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm', iolts]
 
         compute_prefixes: it True, shortest path to reach every state will be computed and saved in the prefix of
             the state. Useful when loading the model to use them as a equivalence oracle. (Default value = False)
@@ -185,8 +185,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
             return StochasticMealyState, StochasticMealyMachine
         elif automaton_type == 'onfsm':
             return OnfsmState, Onfsm
-        elif automaton_type == 'iots':
-            return IotsState, IotsMachine
+        elif automaton_type == 'iolts':
+            return IoltsState, IoltsMachine
         else:
             assert False, "Automaton type is unknown"
 
@@ -267,7 +267,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                 inp = int(inp) if inp.isdigit() else inp
                 prob = float(prob)
                 source.transitions[inp].append((destination, prob))
-            elif isinstance(source, IotsState):
+            elif isinstance(source, IoltsState):
                 if label.startswith('?'):
                     source.add_input(label, destination)
                 elif label.startswith('!'):
@@ -282,7 +282,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         states = list(state_label_dict.values())
         automaton: Automaton = automaton_class(initial_state, states)
 
-        assert automaton.is_input_complete() or automaton_class is IotsMachine
+        assert automaton.is_input_complete() or automaton_class is IoltsMachine
 
         if compute_prefixes:
             for state in automaton.states:
