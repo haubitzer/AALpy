@@ -168,27 +168,32 @@ class IoltsMachineSUL(SUL):
         middle_state = self.iolts.current_state
         outputs = []
         possible_outputs = []
+        enable_diff_state = []
 
         if not word:
             possible_outputs.append([])
             outputs.append(None)
+            enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
 
         for letter in word:
             if letter.startswith("?"):
                 output, middle_state = self.step(letter)
                 possible_outputs.append([key for key, _ in middle_state.get_outputs()])
+                enable_diff_state.append(middle_state.is_input_enabled_for_diff_state())
                 outputs.append(output)
             if letter.startswith("!"):
                 self.iolts.current_state = middle_state
                 self.iolts.step_to(letter)
                 possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
+                enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
                 outputs.append(None)
             if letter == 'QUIESCENCE':
                 possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
+                enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
                 outputs.append(None)
 
 
         self.post()
         self.num_queries += 1
         self.num_steps += len(word)
-        return outputs, possible_outputs
+        return outputs, possible_outputs, enable_diff_state

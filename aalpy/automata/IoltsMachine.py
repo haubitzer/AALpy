@@ -81,8 +81,8 @@ class IoltsState(AutomatonState):
         """
         return any(self.inputs.values())
 
-    def is_input_enabled_for_diff_state(self) -> bool:
-        return all(self not in states for states in self.inputs.values())
+    def is_input_enabled_for_diff_state(self, ) -> bool:
+        return all(self not in states for states in self.inputs.values()) and self.inputs
 
     def is_quiescence(self) -> bool:
         """
@@ -297,7 +297,7 @@ class IocoValidator:
                 new_test_state = self._new_test_state()
                 test_state.add_input("?quiescence", new_test_state)
                 follow_state.update({destination: new_test_state})
-            elif destination.is_quiescence() and destination.is_input_enabled_for_diff_state():
+            elif destination.is_quiescence() and (destination.is_input_enabled_for_diff_state() or not destination.inputs):
                 test_state.add_input("?quiescence", self._new_passed_state())
             else:
                 test_state.add_input("?quiescence", self._new_failed_state())
@@ -318,7 +318,7 @@ class IocoValidator:
 
         return follow_state
 
-    def check(self, sut: IoltsMachine) -> bool:
+    def check(self, sut: IoltsMachine) -> tuple[bool, tuple]:
         """
         Checks if the implementation is ioco to the specification ( i ioco s)
 
@@ -339,10 +339,16 @@ class IocoValidator:
             ioco_violation = not all(self.evaluates_path(sut, path, state, shortest_path) for path in flattened_paths)
 
             if ioco_violation:
-                print(shortest_path)
-                return False
+                cex = []
+                for letter in shortest_path:
+                    if letter.startswith('?'):
+                        cex.append(letter.replace('?', '!'))
+                    if letter.startswith('!'):
+                        cex.append(letter.replace('!', '?'))
 
-        return True
+                return False, tuple(cex)
+
+        return True, tuple()
 
     def _resolve_non_deterministic(self, sut: IoltsMachine, current_state_id: str, path: list, destination_id: str,
                                    resolved_path: list):
@@ -358,7 +364,7 @@ class IocoValidator:
             elif letter.startswith("?"):
                 sut.step_to(letter.replace("?", "!"), destination)
             elif letter.startswith("!"):
-                sut.step_to(letter.replace("!", "?"))
+                sut.step_to(letter.replace("!", "?"), destination)
 
             resolved_path.append((letter, sut.current_state.state_id))
 
@@ -429,17 +435,17 @@ class IocoValidator:
             expect_passed = is_last_letter and ioco_state in self.passed_states
             expect_failed = is_last_letter and ioco_state in self.failed_states
 
-            violation_on_expect_passed = expect_passed and not accepted_quiescence
+            violation_on_expect_passed = expect_passed and not sut.current_state.is_quiescence()
             violation_on_expect_failed = expect_failed and accepted_any
 
             # If the test case triggers an output that is unknown to the specification, the implantation violates ioco.
             invalid_output = any(output not in valid_outputs for output, _ in sut.current_state.get_outputs())
 
-            if invalid_output or violation_on_expect_passed or violation_on_expect_failed:
-                return False
-
             # If the implantation doesn't accepted the current letter, there is no reason to continue with the evaluation.
             if not accepted_any:
                 break
+
+            if invalid_output or violation_on_expect_passed or violation_on_expect_failed:
+                return False
 
         return True

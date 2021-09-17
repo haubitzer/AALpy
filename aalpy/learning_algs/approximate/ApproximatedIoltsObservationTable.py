@@ -175,7 +175,7 @@ class ApproximatedIoltsObservationTable:
             if self.T_completed[s][e]:
                 continue
 
-            # if a trace ends with quiescence only an input can enable an output, so we mark the cell as completed
+            # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
             if len(s + e) > 0 and tuple([(s + e)[-1]]) == QUIESCENCE_TUPLE:
                 self.T[s][e] = QUIESCENCE_TUPLE
                 self.T_completed[s][e] = True
@@ -193,15 +193,18 @@ class ApproximatedIoltsObservationTable:
                     self.T_completed[s][e] = True
                 continue
 
-            outputs, possible_outputs = self.sul.query(s + e)
+            outputs, possible_outputs, enable_diff_state = self.sul.query(s + e)
 
             last_output = outputs[-1]
             last_possible_outputs = possible_outputs[-1]
+            last_enable_diff_state = enable_diff_state[-1]
 
             if last_output is None:
                 self.T[s][e] = QUIESCENCE_TUPLE
                 # Note: I am not sure if T_completed is always false if the output is quiescence
-                self.T_completed[s][e] = False
+                # I think the oracle needs to check if the last state, enables also inputs to different state.
+                # This should fix the issue where an quiescence state that is input enable only to itself is never marked as completed
+                self.T_completed[s][e] = not last_enable_diff_state
             else:
                 self.T[s][e].add(last_output)
                 self.T_completed[s][e] = self.T[s][e] == set(last_possible_outputs)
@@ -209,8 +212,9 @@ class ApproximatedIoltsObservationTable:
         # clean up default dict
         for s, outer in self.T.items():
             if all(not bool(inner) for e, inner in outer.items()):
-                self.T.pop(s)
-                self.T_completed.pop(s)
+                pass
+                # self.T.pop(s)
+                # self.T_completed.pop(s)
 
     def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()

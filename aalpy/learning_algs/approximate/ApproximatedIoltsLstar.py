@@ -1,5 +1,6 @@
 from aalpy.utils.HelperFunctions import extend_set, print_observation_table
 from .ApproximatedIoltsObservationTable import ApproximatedIoltsObservationTable
+from ..deterministic.CounterExampleProcessing import longest_prefix_cex_processing
 from ...SULs import IoltsMachineSUL
 from ...automata import IocoValidator, IoltsMachine
 
@@ -44,19 +45,23 @@ def run_approimated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
-        print(h_minus)
-        print(h_plus)
+        # print(h_minus)
+        # print(h_plus)
 
-        print(IocoValidator(sul.iolts).automata)
+        # print(IocoValidator(sul.iolts).automata)
 
-        print(IocoValidator(sul.iolts).check(h_minus))
+        # print(IocoValidator(sul.iolts).check(h_minus))
 
-        if not IocoValidator(sul.iolts).check(h_minus):
-            pass
+        is_ioco, cex = IocoValidator(sul.iolts).check(h_minus)
+
+        if not is_ioco:
+            print("Found ioco counter example: " + str(cex))
+            cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+            extend_set(observation_table.E, cex_suffixes)
+            continue
 
 
 
-        # Check preciseness
 
         return h_minus, h_plus
 
