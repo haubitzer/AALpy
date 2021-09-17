@@ -160,13 +160,15 @@ def print_observation_table(ot, table_type):
     Args:
 
         ot: observation table
-        table_type: 'det', 'non-det', or 'stoc'
+        table_type: 'det', 'non-det', 'approximated, or 'stoc'
 
     """
     if table_type == 'det':
         s_set, extended_s, e_set, table = ot.S, ot.s_dot_a(), ot.E, ot.T
     elif table_type == 'non-det':
         s_set, extended_s, e_set, table = ot.S, ot.S_dot_A, ot.E, ot.T
+    if table_type == 'approximated':
+        s_set, extended_s, e_set, table, table_completed = ot.S, ot.s_dot_a(), ot.E, ot.T, ot.T_completed
     else:
         s_set, extended_s, e_set, table = ot.S, ot.get_extended_s(), ot.E, ot.T
 
@@ -178,6 +180,8 @@ def print_observation_table(ot, table_type):
         row = [str(s)]
         if table_type == 'det':
             row.extend(str(e) for e in table[s])
+        elif table_type == "approximated":
+             row.extend(str(table[s][e]) + "; " + str(table_completed[s][e]) for e in e_set)
         else:
             row.extend(str(table[s][e]) for e in e_set)
         s_rows.append(row)
@@ -185,8 +189,10 @@ def print_observation_table(ot, table_type):
         row = [str(s)]
         if table_type == 'det':
             row.extend(str(e) for e in table[s])
+        elif table_type == "approximated":
+             row.extend(str(table[s][e]) + "; " + str(table_completed[s][e]) for e in e_set)
         else:
-            row.extend(str(table[s][e]) for e in e_set)
+            row.extend(str(table[s][e])for e in e_set)
         extended_rows.append(row)
 
     table = [headers] + s_rows

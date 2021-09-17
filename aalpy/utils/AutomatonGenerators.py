@@ -1,5 +1,5 @@
 import string
-from aalpy.automata.IotsMachine import IotsMachine, IotsState
+from aalpy.automata.IoltsMachine import IoltsMachine, IoltsState
 import random
 
 from aalpy.automata import Dfa, DfaState, MdpState, Mdp, MealyMachine, MealyState, \
@@ -195,10 +195,10 @@ def generate_random_ONFSM(num_states, num_inputs, num_outputs, multiple_out_prob
     return Onfsm(states[0], states)
 
 
-def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per_state=1, max_num_outputs_per_state=1,
-                         deterministic=True) -> IotsMachine:
+def generate_random_iolts(num_states, num_inputs, num_outputs, max_num_inputs_per_state=1, max_num_outputs_per_state=1,
+                          deterministic=True) -> IoltsMachine:
     """
-    Randomly generate an input-output-tansition-system machine.
+    Randomly generate an input output labeled transition system machine.
 
     The automaton may not be connected.
 
@@ -213,12 +213,12 @@ def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per
      
     Returns:
 
-        randomly generated Iots
+        randomly generated iolts
 
     """
     inputs = ['?' + string.ascii_uppercase[i] for i in range(num_inputs)]
     outputs = ['!' + string.ascii_lowercase[::-1][i] for i in range(num_outputs)]
-    states = [IotsState(f's{i}') for i in range(num_states)]
+    states = [IoltsState(f's{i}') for i in range(num_states)]
 
     for state in states:
         while True:
@@ -240,4 +240,4 @@ def generate_random_iots(num_states, num_inputs, num_outputs, max_num_inputs_per
         else:
             raise Exception("Not implemented yet")
 
-    return IotsMachine(states[0], states)
+    return IoltsMachine(states[0], states)

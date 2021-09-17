@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from aalpy.automata import IotsMachine, IocoValidator
+from aalpy.automata import IoltsMachine, IocoValidator
 from aalpy.utils import load_automaton_from_file
 
 test_cases = [
@@ -20,8 +20,8 @@ class IocoValidatorTest(TestCase):
     def test_ioco_check(self):
         for spec_path, impl_path, expect in test_cases:
             with self.subTest(msg="Checking if ioco relation between:", S=spec_path, P=impl_path, E=expect):
-                specification: IotsMachine = load_automaton_from_file(spec_path, "iots")
-                implementation: IotsMachine = load_automaton_from_file(impl_path, "iots")
+                specification: IoltsMachine = load_automaton_from_file(spec_path, 'iolts')
+                implementation: IoltsMachine = load_automaton_from_file(impl_path, 'iolts')
                 actual = IocoValidator(specification).check(implementation)
 
                 self.assertEqual(actual, expect)

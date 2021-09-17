@@ -9,54 +9,68 @@ from typing import Optional
 from aalpy.base import Automaton, AutomatonState
 
 
-class IotsState(AutomatonState):
+class IoltsState(AutomatonState):
     def __init__(self, state_id):
         super().__init__(state_id)
         # Note: inputs/outputs maps to tuples of possible new state e.g. input => (state1, state2)
         self.inputs = defaultdict(tuple)
         self.outputs = defaultdict(tuple)
-        # Note: workaround for ioco
+        self.quiescence = defaultdict(tuple)
+        self.add_quiescence(self)
+        # TODO: workaround for ioco, add a two sets to the ioco validator
         self.ioco_status = None
 
-    def get_inputs(self, input: string = None, destination: IotsState = None) -> list[tuple[str, IotsState]]:
+    def get_inputs(self, input: string = None, destination: IoltsState = None) -> list[tuple[str, IoltsState]]:
         assert input is None or input.startswith('?')
 
-        result = [(input, state)
-                  for input, states in self.inputs.items() for state in states]
-        result = result if input is None else list(
-            filter(lambda elm: elm[0] == input, result))
-        result = result if destination is None else list(
-            filter(lambda elm: elm[1] == destination, result))
+        result = [(input, state) for input, states in self.inputs.items() for state in states]
+        result = result if input is None else list(filter(lambda elm: elm[0] == input, result))
+        result = result if destination is None else list(filter(lambda elm: elm[1] == destination, result))
 
         return result
 
-    def get_outputs(self, output: string = None, destination: IotsState = None) -> list[tuple[str, IotsState]]:
+    def get_outputs(self, output: string = None, destination: IoltsState = None) -> list[tuple[str, IoltsState]]:
         assert output is None or output.startswith('!')
 
-        result = [(output, state)
-                  for output, states in self.outputs.items() for state in states]
-        result = result if output is None else list(
-            filter(lambda elm: elm[0] == output, result))
-        result = result if destination is None else list(
-            filter(lambda elm: elm[1] == destination, result))
+        result = [(output, state) for output, states in self.outputs.items() for state in states]
+        result = result if output is None else list(filter(lambda elm: elm[0] == output, result))
+        result = result if destination is None else list(filter(lambda elm: elm[1] == destination, result))
 
         return result
 
-    def add_input(self, input: string, new_state: IotsState):
+    def get_quiescence(self) -> list[tuple[str, IoltsState]]:
+        if self.quiescence is not None:
+            return [(quiescence, state) for quiescence, states in self.quiescence.items() for state in states]
+
+        if self.is_quiescence():
+            return [('quiescence', self)]
+
+        return []
+
+    def add_input(self, input: string, new_state: IoltsState):
         assert input.startswith('?')
 
-        new_value = tuple(
-            [new_state]) + self.inputs[input] if input in self.inputs else tuple([new_state])
+        new_value = tuple([new_state]) + self.inputs[input] if input in self.inputs else tuple([new_state])
         self.inputs.update({input: new_value})
         self.transitions.update(self.inputs)
 
     def add_output(self, output: string, new_state):
         assert output.startswith('!')
 
-        new_value = tuple(
-            new_state) + self.outputs[output] if output in self.outputs else tuple([new_state])
+        new_value = tuple([new_state]) + self.outputs[output] if output in self.outputs else tuple([new_state])
         self.outputs.update({output: new_value})
         self.transitions.update(self.outputs)
+        # clear the quiescence entries, the are not valid
+        self.quiescence.clear()
+
+    def add_quiescence(self, new_state: IoltsState = None):
+        if new_state is None:
+            new_state = self
+
+        new_value = tuple([new_state]) + self.quiescence['quiescence'] if 'quiescence' in self.quiescence else tuple(
+            [new_state])
+        self.quiescence.update({'quiescence': new_value})
+        self.transitions.update(self.quiescence)
 
     def is_input_enabled(self) -> bool:
         """
@@ -80,32 +94,30 @@ class IotsState(AutomatonState):
         return not any(self.outputs.values())
 
     def is_deterministic(self) -> bool:
-        deterministic_input = all(
-            len(states) == 1 for states in self.inputs.values())
-        deterministic_output = all(
-            len(states) == 1 for states in self.outputs.values())
+        deterministic_input = all(len(states) == 1 for states in self.inputs.values())
+        deterministic_output = all(len(states) == 1 for states in self.outputs.values())
         return deterministic_input and deterministic_output
 
 
-class IotsMachine(Automaton):
+class IoltsMachine(Automaton):
     """
-    Input output transition system machine.
+    Input output labeled transition system machine.
     """
 
-    def __init__(self, initial_state: IotsState, states: list[IotsState]):
+    def __init__(self, initial_state: IoltsState, states: list[IoltsState]):
         super().__init__(initial_state, states)
-        self.current_state: IotsState
-        self.initial_state: IotsState
-        self.states: list[IotsState]
+        self.current_state: IoltsState
+        self.initial_state: IoltsState
+        self.states: list[IoltsState]
 
     def step(self, letter):
-        # TODO what should happen if the state doesn't accept the given input?, should i
+        # TODO what should happen if the state doesn't accept the given input?
         input = self._input_step_to(letter, None)
         middle_state = self.current_state
         output = self._output_step_to(None, None)
         return output, middle_state
 
-    def step_to(self, letter: string, destination: IotsState = None) -> Optional[str]:
+    def step_to(self, letter: string, destination: IoltsState = None) -> Optional[str]:
         """
         Next step is determined based on a uniform distribution over all transitions with possible by the given 'letter'.
 
@@ -118,6 +130,9 @@ class IotsMachine(Automaton):
         if letter.startswith("!"):
             return self._output_step_to(letter, destination)
 
+        if letter == 'quiescence':
+            return self._quiescence_step_to()
+
         raise Exception("Unable to match letter")
 
     def _input_step_to(self, input: str, destination) -> Optional[str]:
@@ -128,8 +143,17 @@ class IotsMachine(Automaton):
         (key, self.current_state) = choice(transitions)
         return key
 
-    def _output_step_to(self, output: Optional[str], destination) -> Optional[str]:
+    def _output_step_to(self, output: Optional[str], destination: IoltsState) -> Optional[str]:
         transitions = self.current_state.get_outputs(output, destination)
+        if not transitions:
+            return None
+
+        (key, self.current_state) = choice(transitions)
+        return key
+
+    def _quiescence_step_to(self) -> Optional[str]:
+        # Note can quiescence be non deterministic? if so destination is imported.
+        transitions = self.current_state.get_quiescence()
         if not transitions:
             return None
 
@@ -207,44 +231,48 @@ class IotsMachine(Automaton):
 
 class IocoValidator:
 
-    def __init__(self, specification: IotsMachine):
-        self.specification: IotsMachine = deepcopy(specification)
+    def __init__(self, specification: IoltsMachine):
+        self.specification: IoltsMachine = deepcopy(specification)
 
         self.states = []
         self.visited = []
         self.state_count = 0
 
+        self.passed_states = set();
+        self.failed_states = set();
+
         self.initial_state = self._new_test_state()
         self._resolve_state(self.specification.initial_state, self.initial_state)
 
-        self.automata: IotsMachine = IotsMachine(self.initial_state, self.states)
+        self.automata: IoltsMachine = IoltsMachine(self.initial_state, self.states)
 
-    def _new_test_state(self):
+    def _new_test_state(self, suffix: str = None):
         self.state_count += 1
-        state = IotsState(f't{self.state_count}')
-        state.ioco_status = "test"
+        if suffix:
+            state = IoltsState(f't{self.state_count} {suffix}')
+        else:
+            state = IoltsState(f't{self.state_count}')
+
         self.states.append(state)
         return state
 
     def _new_passed_state(self):
-        state = self._new_test_state()
-        state.ioco_status = "passed"
-        state.state_id += " passed"
+        state = self._new_test_state("passed")
+        self.passed_states.add(state)
         return state
 
     def _new_failed_state(self):
-        state = self._new_test_state()
-        state.ioco_status = "failed"
-        state.state_id += " failed"
+        state = self._new_test_state("failed")
+        self.failed_states.add(state)
         return state
 
-    def _resolve_state(self, original_state: IotsState, test_state: IotsState):
+    def _resolve_state(self, original_state: IoltsState, test_state: IoltsState):
         self.visited.append(original_state)
 
         follow_state = dict()
 
         for input in self.specification.get_input_alphabet():
-            states = original_state.inputs[input]
+            states = [state for _, state in original_state.get_inputs(input)]
 
             if not states:
                 test_state.add_output(input.replace("?", "!"), self._new_failed_state())
@@ -290,7 +318,7 @@ class IocoValidator:
 
         return follow_state
 
-    def check(self, sut: IotsMachine) -> bool:
+    def check(self, sut: IoltsMachine) -> bool:
         """
         Checks if the implementation is ioco to the specification ( i ioco s)
 
@@ -301,7 +329,7 @@ class IocoValidator:
 
         """
         for state in self.automata.states:
-            if state.ioco_status == "test":
+            if state not in self.passed_states and state not in self.failed_states:
                 continue
 
             shortest_path = list(self.automata.get_shortest_path(self.automata.initial_state, state))
@@ -311,25 +339,26 @@ class IocoValidator:
             ioco_violation = not all(self.evaluates_path(sut, path, state, shortest_path) for path in flattened_paths)
 
             if ioco_violation:
+                print(shortest_path)
                 return False
 
         return True
 
-    def _resolve_non_deterministic(self, sut: IotsMachine, current_state_id: str, path: list, destination_id: str,
+    def _resolve_non_deterministic(self, sut: IoltsMachine, current_state_id: str, path: list, destination_id: str,
                                    resolved_path: list):
         sut.reset_to_initial()
         sut.current_state = sut.get_state_by_id(current_state_id)
 
         if destination_id is not None:
             letter = path.pop(0)
-            destination = sut.get_state_by_id(destination_id)
+            destination: IoltsState = sut.get_state_by_id(destination_id)
 
             if letter == "?quiescence":
-                pass
+                sut.step_to('quiescence', destination)
             elif letter.startswith("?"):
                 sut.step_to(letter.replace("?", "!"), destination)
             elif letter.startswith("!"):
-                sut.step_to(letter.replace("!", "?"), destination)
+                sut.step_to(letter.replace("!", "?"))
 
             resolved_path.append((letter, sut.current_state.state_id))
 
@@ -341,7 +370,7 @@ class IocoValidator:
         possible_destinations = []
 
         if next_letter == "?quiescence":
-            possible_destinations = [(next_letter, sut.current_state)]
+            possible_destinations = sut.current_state.get_quiescence()
         elif next_letter.startswith("?"):
             possible_destinations = sut.current_state.get_outputs(next_letter.replace("?", '!'))
         elif next_letter.startswith("!"):
@@ -378,12 +407,12 @@ class IocoValidator:
 
         return result
 
-    def evaluates_path(self, sut: IotsMachine, path: list, ioco_state: IotsState, shortest_path: list):
+    def evaluates_path(self, sut: IoltsMachine, path: list, ioco_state: IoltsState, shortest_path: list):
         sut.reset_to_initial()
         valid_outputs = [key.replace("?", "!") for key in self.automata.get_input_alphabet()]
 
         for idx, (letter, destination_id) in enumerate(path):
-            destination: IotsState = sut.get_state_by_id(destination_id)
+            destination: IoltsState = sut.get_state_by_id(destination_id)
 
             is_input = letter.startswith("!")
             is_quiescence = letter == "?quiescence"
@@ -397,8 +426,8 @@ class IocoValidator:
 
             # We only handle and check the expected ioco stat at the end of the path
             is_last_letter = (idx + 1) == len(shortest_path)
-            expect_passed = is_last_letter and ioco_state.ioco_status == "passed"
-            expect_failed = is_last_letter and ioco_state.ioco_status == "failed"
+            expect_passed = is_last_letter and ioco_state in self.passed_states
+            expect_failed = is_last_letter and ioco_state in self.failed_states
 
             violation_on_expect_passed = expect_passed and not accepted_quiescence
             violation_on_expect_failed = expect_failed and accepted_any
@@ -414,23 +443,3 @@ class IocoValidator:
                 break
 
         return True
-
-class CompletenessOracle:
-
-    def __init__(self, automata: IotsMachine):
-        self.automata: IotsMachine = deepcopy(automata)
-
-
-    def get_state_after(self, word):
-        self.automata.reset_to_initial()
-
-        for letter in word:
-            self.automata.step(letter)
-
-        out = [self.step(letter) for letter in word]
-
-
-
-    def is_complete_after(self, word, cell):
-        pass
-

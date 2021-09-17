@@ -1,5 +1,5 @@
 from aalpy.base import SUL
-from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IotsMachine, IotsState
+from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IoltsMachine, IoltsState
 
 
 class DfaSUL(SUL):
@@ -146,13 +146,13 @@ class StochasticMealySUL(SUL):
         return self.smm.step(letter)
 
 
-class IotsMachineSUL(SUL):
-    def __init__(self, iots: IotsMachine):
+class IoltsMachineSUL(SUL):
+    def __init__(self, iolts: IoltsMachine):
         super().__init__()
-        self.iots = iots
+        self.iolts = iolts
 
     def pre(self):
-        self.iots.reset_to_initial()
+        self.iolts.reset_to_initial()
 
     def post(self):
         pass
@@ -160,26 +160,35 @@ class IotsMachineSUL(SUL):
     def step(self, letter):
         if letter == "QUIESCENCE":
             letter = "?quiescence"
-        return self.iots.step(letter)
+        return self.iolts.step(letter)
 
-    def query(self, word: tuple) -> tuple[list, IotsState]:
+    def query(self, word: tuple) -> tuple[list, list]:
         self.pre()
 
-        middle_state = self.iots.initial_state
-        out = []
+        middle_state = self.iolts.current_state
+        outputs = []
+        possible_outputs = []
+
         if not word:
-            word = ["?empty_word"]
+            possible_outputs.append([])
+            outputs.append(None)
 
         for letter in word:
-            if letter.startswith("?") or letter == "QUIESCENCE":
+            if letter.startswith("?"):
                 output, middle_state = self.step(letter)
-                out.append(output)
+                possible_outputs.append([key for key, _ in middle_state.get_outputs()])
+                outputs.append(output)
             if letter.startswith("!"):
-                self.iots.current_state = middle_state
-                output = self.iots.step_to(letter)
-                out.append(output)
+                self.iolts.current_state = middle_state
+                self.iolts.step_to(letter)
+                possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
+                outputs.append(None)
+            if letter == 'QUIESCENCE':
+                possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
+                outputs.append(None)
+
 
         self.post()
         self.num_queries += 1
         self.num_steps += len(word)
-        return out, middle_state
+        return outputs, possible_outputs
