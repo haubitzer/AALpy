@@ -3,7 +3,7 @@ from aalpy.automata.IoltsMachine import IoltsMachine, IoltsState
 import random
 
 from aalpy.automata import Dfa, DfaState, MdpState, Mdp, MealyMachine, MealyState, \
-    MooreMachine, MooreState, OnfsmState, Onfsm
+    MooreMachine, MooreState, OnfsmState, Onfsm, MarkovChain, McState
 from aalpy.utils.HelperFunctions import random_string_generator
 
 
@@ -116,7 +116,7 @@ def generate_random_dfa(num_states, alphabet, num_accepting_states=1, compute_pr
     return dfa
 
 
-def generate_random_mdp(num_states, len_input, num_unique_outputs=None):
+def generate_random_mdp(num_states, len_input, custom_outputs=None, num_unique_outputs=None):
     """
     Generates random MDP.
 
@@ -124,6 +124,7 @@ def generate_random_mdp(num_states, len_input, num_unique_outputs=None):
 
         num_states: number of states
         len_input: number of inputs
+        custom_outputs: user predefined outputs
         num_unique_outputs: number of outputs
 
     Returns:
@@ -133,6 +134,7 @@ def generate_random_mdp(num_states, len_input, num_unique_outputs=None):
     """
     num_unique_outputs = num_states if not num_unique_outputs else num_unique_outputs
     outputs = [random_string_generator(random.randint(3, 7)) for _ in range(num_unique_outputs)]
+    outputs = custom_outputs if custom_outputs else outputs
 
     while len(outputs) < num_states:
         outputs.append(random.choice(outputs))
@@ -195,6 +197,31 @@ def generate_random_ONFSM(num_states, num_inputs, num_outputs, multiple_out_prob
     return Onfsm(states[0], states)
 
 
+def generate_random_markov_chain(num_states):
+    assert num_states >= 3
+    possible_probabilities = [1.0, 1.0, 0.8, 0.5, 0.9]
+    states = []
+
+    for i in range(num_states):
+        states.append(McState(f'q{i}', i))
+
+    for index, state in enumerate(states[:-1]):
+        prob = random.choice(possible_probabilities)
+        if prob == 1.:
+            new_state = states[index + 1]
+            state.transitions.append((new_state, prob))
+        else:
+            next_state = states[index + 1]
+            up_states = list(states)
+            up_states.remove(next_state)
+            rand_state = random.choice(up_states)
+
+            state.transitions.append((next_state, prob))
+            state.transitions.append((rand_state, round(1 - prob, 2)))
+
+    return MarkovChain(states[0], states)
+
+
 def generate_random_iolts(num_states, num_inputs, num_outputs, max_num_inputs_per_state=1, max_num_outputs_per_state=1,
                           deterministic=True) -> IoltsMachine:
     """
@@ -210,7 +237,7 @@ def generate_random_iolts(num_states, num_inputs, num_outputs, max_num_inputs_pe
       max_num_inputs_per_state: maximal number of inputs per state (Default value = 1)
       max_num_outputs_per_state: maximal number of outputs per state (Default value = 1)
       deterministic: if true the automata is deterministic if false the automata may be non-deterministic
-     
+
     Returns:
 
         randomly generated iolts

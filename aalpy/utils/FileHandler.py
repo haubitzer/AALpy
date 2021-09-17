@@ -4,7 +4,7 @@ import os
 from pydot import Dot, Node, Edge, graph_from_dot_file
 
 from aalpy.automata import Dfa, MooreMachine, Mdp, Onfsm, MealyState, DfaState, MooreState, MealyMachine, \
-    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, IoltsState, IoltsMachine
+    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, MarkovChain, McState,  IoltsState, IoltsMachine
 
 file_types = ['dot', 'png', 'svg', 'pdf', 'string']
 
@@ -67,6 +67,7 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
     is_mdp = isinstance(automaton, Mdp)
     is_onsfm = isinstance(automaton, Onfsm)
     is_smm = isinstance(automaton, StochasticMealyMachine)
+    is_mc = isinstance(automaton, MarkovChain)
     is_iolts = isinstance(automaton, IoltsMachine)
 
     graph = Dot(path, graph_type='digraph')
@@ -77,12 +78,16 @@ def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
         elif is_moore:
             graph.add_node(Node(state.state_id, label=f'{state.state_id}|{state.output}',
                                 shape='record', style='rounded'))
-        elif is_mdp:
+        elif is_mdp or is_mc:
             graph.add_node(Node(state.state_id, label=f'{state.output}'))
         else:
             graph.add_node(Node(state.state_id, label=state.state_id))
 
     for state in automaton.states:
+        if is_mc:
+            for new_state, prob in state.transitions:
+                graph.add_edge(Edge(state.state_id, new_state.state_id, label=f'{round(prob, 2)}'))
+            continue
         for i in state.transitions.keys():
             if isinstance(state, MealyState):
                 new_state = state.transitions[i]
@@ -162,7 +167,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
         path: path to the file
 
         automaton_type: type of the automaton, if not specified it will be automatically determined according,
-            one of ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm', iolts]
+            one of ['dfa', 'mealy', 'moore', 'mdp', 'smm', 'onfsm', 'mc', 'iolts']
 
         compute_prefixes: it True, shortest path to reach every state will be computed and saved in the prefix of
             the state. Useful when loading the model to use them as a equivalence oracle. (Default value = False)
@@ -185,6 +190,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
             return StochasticMealyState, StochasticMealyMachine
         elif automaton_type == 'onfsm':
             return OnfsmState, Onfsm
+        elif automaton_type == 'mc':
+            return McState, MarkovChain
         elif automaton_type == 'iolts':
             return IoltsState, IoltsMachine
         else:
@@ -267,6 +274,9 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                 inp = int(inp) if inp.isdigit() else inp
                 prob = float(prob)
                 source.transitions[inp].append((destination, prob))
+            elif isinstance(source, McState):
+                prob = label
+                source.transitions.append((destination,float(prob)))
             elif isinstance(source, IoltsState):
                 if label.startswith('?'):
                     source.add_input(label, destination)
@@ -274,7 +284,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                     source.add_output(label, destination)
                 else:
                     assert False, "No prefix found."
-            else:
+            else: # moore or dfa
                 label = int(label) if label.isdigit() else label
                 source.transitions[label] = destination
 
@@ -309,3 +319,21 @@ def _process_label(label: str) -> str:
         label = label[1:-1]
     label = label.replace(" ", "")
     return label
+
+
+def visualize_fpta(red):
+    red_sorted = sorted(list(red), key=lambda x: len(x.prefix))
+    graph = Dot('fpta', graph_type='digraph')
+
+    for i, r in enumerate(red_sorted):
+        r.state_id = f'q{i}'
+        graph.add_node(Node(r.state_id, label=r.state_id))
+
+    for r in red_sorted:
+        for i, c in r.children.items():
+            graph.add_edge(Edge(r.state_id, c.state_id, label=i))
+
+    graph.add_node(Node('__start0', shape='none', label=''))
+    graph.add_edge(Edge('__start0', red_sorted[0].state_id, label=''))
+
+    return graph
