@@ -62,6 +62,7 @@ class IoltsState(AutomatonState):
         self.transitions.update(self.outputs)
         # clear the quiescence entries, the are not valid
         self.quiescence.clear()
+        self.transitions.pop('quiescence', None)
 
     def add_quiescence(self, new_state: IoltsState = None):
         if new_state is None:
@@ -69,7 +70,7 @@ class IoltsState(AutomatonState):
 
         new_value = tuple([new_state]) + self.quiescence['quiescence'] if 'quiescence' in self.quiescence else tuple(
             [new_state])
-        self.quiescence.update({'quiescence': new_value})
+        self.quiescence.update({'quiescence': tuple(set(list(new_value)))})
         self.transitions.update(self.quiescence)
 
     def is_input_enabled(self) -> bool:
@@ -91,7 +92,7 @@ class IoltsState(AutomatonState):
         Returns:
             bool: quiescence flag
         """
-        return not any(self.outputs.values())
+        return bool(self.quiescence)
 
     def is_deterministic(self) -> bool:
         deterministic_input = all(len(states) == 1 for states in self.inputs.values())
@@ -341,9 +342,11 @@ class IocoValidator:
             if ioco_violation:
                 cex = []
                 for letter in shortest_path:
-                    if letter.startswith('?'):
+                    if letter == '?quiescence':
+                        cex.append('QUIESCENCE')
+                    elif letter.startswith('?'):
                         cex.append(letter.replace('?', '!'))
-                    if letter.startswith('!'):
+                    elif letter.startswith('!'):
                         cex.append(letter.replace('!', '?'))
 
                 return False, tuple(cex)

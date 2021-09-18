@@ -5,7 +5,7 @@ from ...SULs import IoltsMachineSUL
 from ...automata import IocoValidator, IoltsMachine
 
 
-def run_approimated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul: IoltsMachineSUL, print_level=2):
+def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul: IoltsMachineSUL, max_iteration: int = 30, print_level=2):
     """
 
     """
@@ -13,10 +13,12 @@ def run_approimated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul
     # Initialize (S,E,T)
     observation_table = ApproximatedIoltsObservationTable(input_alphabet, output_alphabet, sul)
 
-    while True:
-
+    while True and max_iteration > 1:
+        max_iteration = max_iteration - 1
         is_reducible = False
+
         while not is_reducible:
+
             # Update (S,E,T)
             observation_table.update_obs_table()
 
@@ -36,32 +38,30 @@ def run_approimated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul
 
             # Check quiescence reducible
             is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
+            extend_set(observation_table.E, e_set_reducible)
             print("Found E by quiescence reducible: " + str(e_set_reducible))
-            # extend_set(observation_table.E, e_set_reducible)
 
         print_observation_table(observation_table, "approximated")
 
-        # Consturuct H- and H+
+        # Construct H- and H+
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
-        # print(h_minus)
-        # print(h_plus)
-
-        # print(IocoValidator(sul.iolts).automata)
-
-        # print(IocoValidator(sul.iolts).check(h_minus))
-
-        is_ioco, cex = IocoValidator(sul.iolts).check(h_minus)
-
-        if not is_ioco:
-            print("Found ioco counter example: " + str(cex))
+        # Use the Ioco validator to find counter examples
+        is_ioco_minus, cex = IocoValidator(sul.iolts).check(h_minus)
+        if not is_ioco_minus:
+            print("Found ioco counter example (SUL ioco H_minus): " + str(cex))
             cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
             extend_set(observation_table.E, cex_suffixes)
             continue
 
+        is_ioco_plus, cex = IocoValidator(h_plus).check(sul.iolts)
+        if not is_ioco_plus:
+            print("Found ioco counter example (H_plus ioco SUL ): " + str(cex))
+            cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+            extend_set(observation_table.E, cex_suffixes)
+            continue
 
+        break
 
-
-        return h_minus, h_plus
-
+    return h_minus, h_plus
