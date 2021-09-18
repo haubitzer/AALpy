@@ -242,8 +242,7 @@ class ApproximatedIoltsObservationTable:
 
             for o in self.row(s)[EMPTY_WORD]:
                 if o == QUIESCENCE:
-                    pass
-                    # state.add_output("!quiescence", states_dict[s])
+                    state.add_quiescence(states_dict[s])
                 else:
                     row = self.row(s + tuple([o]))
                     destination_state = state_distinguish[str(row)]
@@ -265,8 +264,8 @@ class ApproximatedIoltsObservationTable:
         for output in self.A_output:
             chaos_state.add_output(output[0], chaos_state)
 
-        chaos_state.add_output('!quiescence', chaos_quiescence_state)
-        chaos_quiescence_state.add_output('!quiescence', chaos_quiescence_state)
+        chaos_state.add_quiescence(chaos_quiescence_state)
+        chaos_quiescence_state.add_quiescence(chaos_quiescence_state)
 
         # create states based on S set
         for stateCounter, s in enumerate(self.S):
@@ -291,14 +290,14 @@ class ApproximatedIoltsObservationTable:
                 output = output_tuple[0]
 
                 if output in self.row(s)[EMPTY_WORD]:
-                    if output_tuple == QUIESCENCE_TUPLE:
-                        output = '!quiescence'
-
                     row = self.row_plus(s + output_tuple)
-                    state.add_output(output, state_distinguish.get(str(row), states_dict[s]))
+                    if output_tuple == QUIESCENCE_TUPLE:
+                        state.add_quiescence(state_distinguish.get(str(row)))
+                    else:
+                        state.add_output(output, state_distinguish.get(str(row)))
                 elif not self.row_plus(s)[EMPTY_WORD][1]:
                     if output_tuple == QUIESCENCE_TUPLE:
-                        state.add_output('!quiescence', chaos_quiescence_state)
+                        state.add_quiescence(chaos_quiescence_state)
                     else:
                         state.add_output(output, chaos_state)
 
