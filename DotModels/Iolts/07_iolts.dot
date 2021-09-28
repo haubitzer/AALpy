@@ -6,8 +6,17 @@ s3 [label=s3];
 s4 [label=s4];
 s0 -> s2  [label="?a"];
 s0 -> s1  [label="?b"];
+s0 -> s0  [label="?c"];
+s1 -> s1  [label="?a"];
+s1 -> s1  [label="?b"];
 s1 -> s3  [label="?c"];
+s2 -> s2  [label="?a"];
+s2 -> s2  [label="?b"];
+s2 -> s2  [label="?c"];
 s3 -> s4  [label="!y"];
+s4 -> s4  [label="?a"];
+s4 -> s4  [label="?b"];
+s4 -> s4  [label="?c"];
 __start0 [label="", shape=none];
 __start0 -> s0  [label=""];
 }

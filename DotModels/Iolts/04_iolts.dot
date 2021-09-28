@@ -10,8 +10,13 @@ s0 -> s1  [label="?A"];
 s0 -> s2  [label="?B"];
 s0 -> s0  [label="?C"];
 s2 -> s3  [label="!2"];
+s3 -> s3  [label="?A"];
+s3 -> s3  [label="?B"];
 s3 -> s4  [label="?C"];
 s1 -> s4  [label="!1"];
+s4 -> s4  [label="?A"];
+s4 -> s4  [label="?B"];
+s4 -> s4  [label="?C"];
 
 __start0 [label="", shape=none];
 __start0 -> s0  [label=""];
