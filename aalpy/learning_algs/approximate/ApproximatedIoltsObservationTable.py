@@ -57,11 +57,11 @@ class ApproximatedIoltsObservationTable:
         next_is_input = next.startswith("?")
         next_is_output = next.startswith("!")
         next_is_quiescence = next == QUIESCENCE
-        next_in_T = next in self.row(s[:-1])[EMPTY_WORD] or tuple([next]) == self.row(s[:-1])[EMPTY_WORD]
+        next_in_T = next in self.row(s[:-1])[EMPTY_WORD]
 
         valid_input = (prev_is_output or prev_is_quiescence or quiescence_in_T) and next_is_input
         valid_output = prev_is_input and next_is_output and next_in_T
-        valid_quiescence = quiescence_in_T and next_is_quiescence
+        valid_quiescence = quiescence_in_T and not prev_is_quiescence and next_is_quiescence
 
         return valid_input or valid_output or valid_quiescence
 
@@ -87,6 +87,7 @@ class ApproximatedIoltsObservationTable:
 
             if not any(self.row_plus(s1 + a) == self.row_plus(s2) for s2 in self.S):
                 rows_to_close.append(s1 + a)
+                return len(rows_to_close) == 0, list(set(rows_to_close))
 
         return len(rows_to_close) == 0, list(set(rows_to_close))
 
@@ -100,13 +101,15 @@ class ApproximatedIoltsObservationTable:
 
                 if self.row(s1) == self.row(s2) and self.row(s1 + a)[e] != self.row(s2 + a)[e]:
                     causes_of_inconsistency.append(a + e)
+                    return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
 
                 if self.row_plus(s1) == self.row_plus(s2) and self.row_plus(s1 + a)[e] != self.row_plus(s2 + a)[e]:
                     causes_of_inconsistency.append(a + e)
+                    return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
 
         return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
 
-    def is_quiescence_reducible(self):
+    def is_quiescence_reducible(self) -> tuple[bool, list]:
         for s1, s2 in itertools.product(self.S, self.S):
             if QUIESCENCE not in self.row(s1)[EMPTY_WORD]:
                 continue
@@ -119,12 +122,12 @@ class ApproximatedIoltsObservationTable:
             while wait:
                 s1, s2, t = wait.pop(0)
 
-                s1_cell_values = [self.row(s1)[EMPTY_WORD]] + self.A_input
-                s2_cell_values = [self.row(s2)[EMPTY_WORD]] + self.A_input
+                s1_cell_values = [(out,) for out in self.row(s1)[EMPTY_WORD]] + self.A_input
+                s2_cell_values = [(out,) for out in self.row(s2)[EMPTY_WORD]] + self.A_input
 
                 for a in s2_cell_values:
                     if a not in s1_cell_values:
-                        return False, t
+                        return False, [t]
 
                     s_prime_1 = None
                     s_prime_2 = None
@@ -134,7 +137,7 @@ class ApproximatedIoltsObservationTable:
                         if self.row_plus(s) == self.row_plus(s2 + a):
                             s_prime_2 = s
 
-                    if s_prime_1 != s_prime_2 and (s_prime_1, s_prime_2) not in past:
+                    if s_prime_1 != s_prime_2 and (s_prime_1, s_prime_2) not in past and s_prime_1 is not None and s_prime_2 is not None:
                         wait.append((s_prime_1, s_prime_2, t + a))
 
                 past.append((s1, s2))
@@ -169,7 +172,7 @@ class ApproximatedIoltsObservationTable:
 
         for s, e in itertools.product(update_S, update_E):
             # If cell is marked as completed the loop can continue
-            if not self.row_is_defined(s):
+            if not self.row_is_defined(s + e):
                 continue
 
             if self.T_completed[s][e]:
@@ -177,14 +180,14 @@ class ApproximatedIoltsObservationTable:
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
             if len(s + e) > 0 and tuple([(s + e)[-1]]) == QUIESCENCE_TUPLE:
-                self.T[s][e] = QUIESCENCE_TUPLE
+                self.T[s][e].add(QUIESCENCE)
                 self.T_completed[s][e] = True
                 continue
 
             # if s ends with Q and s[-1] enables only Q than row(s + Q) == row(s)
             longest_prefix = s[:-1]
             ends_with_quiescence = len(s) > 0 and s[-1] == QUIESCENCE_TUPLE
-            enable_quiescence = self.T[longest_prefix][EMPTY_WORD] == QUIESCENCE_TUPLE
+            enable_quiescence = QUIESCENCE in self.T[longest_prefix][EMPTY_WORD]
             prefix_completed = self.T_completed[s][EMPTY_WORD]
 
             if ends_with_quiescence and enable_quiescence and prefix_completed:
@@ -193,33 +196,25 @@ class ApproximatedIoltsObservationTable:
                     self.T_completed[s][e] = True
                 continue
 
-            outputs, possible_outputs, enable_diff_state = self.sul.query(s + e)
+            output = self.sul.query(s + e)
 
-            last_output = outputs[-1]
-            last_possible_outputs = possible_outputs[-1]
-            last_enable_diff_state = enable_diff_state[-1]
+            if output is None:
+                continue
 
-            if last_output is None:
-                self.T[s][e] = QUIESCENCE_TUPLE
-                # Note: I am not sure if T_completed is always false if the output is quiescence
-                # I think the oracle needs to check if the last state, enables also inputs to different state.
-                # This should fix the issue where an quiescence state that is input enable only to itself is never marked as completed
-                self.T_completed[s][e] = not last_enable_diff_state
-            else:
-                self.T[s][e].add(last_output)
-                self.T_completed[s][e] = self.T[s][e] == set(last_possible_outputs)
+            self.T[s][e].add(output)
+            self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
 
-        # clean up default dict
-        for s, outer in self.T.items():
-            if all(not bool(inner) for e, inner in outer.items()):
-                pass
-                # self.T.pop(s)
-                # self.T_completed.pop(s)
+        for s, e in itertools.product(update_S, update_E):
+            self.T[s].update(dict(sorted(self.T[s].items())))
+
 
     def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
+
+        chaos_quiescence_state = IoltsState('Xq')
+        chaos_quiescence_state.add_quiescence(chaos_quiescence_state)
 
         # create states based on S set
         for stateCounter, s in enumerate(self.S):
@@ -238,17 +233,20 @@ class ApproximatedIoltsObservationTable:
             state = states_dict[s]
             for i in self.A_input:
                 row = self.row(s + i)
-                state.add_input(i[0], state_distinguish.get(str(row), states_dict[s]))
+                if str(row) in state_distinguish:
+                    state.add_input(i[0], state_distinguish.get(str(row)))
 
             for o in self.row(s)[EMPTY_WORD]:
                 if o == QUIESCENCE:
-                    state.add_quiescence(states_dict[s])
+                    pass
+                    # state.add_quiescence(chaos_quiescence_state)
                 else:
                     row = self.row(s + tuple([o]))
+                    # TODO str(row) is not the same as str(row) if the oder of the set is not the same
                     destination_state = state_distinguish[str(row)]
                     state.add_output(o, destination_state)
 
-        automaton = IoltsMachine(initial_state, list(states_dict.values()))
+        automaton = IoltsMachine(initial_state, list(states_dict.values()) + [chaos_quiescence_state]) # TODO change ti distiguish but need to restructe the state is because of the Ioco checker
         automaton.characterization_set = self.E
 
         return automaton
@@ -284,7 +282,8 @@ class ApproximatedIoltsObservationTable:
             state = states_dict[s]
             for i in self.A_input:
                 row = self.row_plus(s + i)
-                state.add_input(i[0], state_distinguish.get(str(row), states_dict[s]))
+                if str(row) in state_distinguish:
+                    state.add_input(i[0], state_distinguish.get(str(row)))
 
             for output_tuple in self.A_output + [QUIESCENCE_TUPLE]:
                 output = output_tuple[0]
