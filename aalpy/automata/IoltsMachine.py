@@ -16,7 +16,7 @@ class IoltsState(AutomatonState):
         self.inputs = defaultdict(tuple)
         self.outputs = defaultdict(tuple)
         self.quiescence = defaultdict(tuple)
-        self.add_quiescence(self)
+        self.add_quiescence(None)
         # TODO: workaround for ioco, add a two sets to the ioco validator
         self.ioco_status = None
 
@@ -65,8 +65,11 @@ class IoltsState(AutomatonState):
         self.transitions.pop('quiescence', None)
 
     def add_quiescence(self, new_state: IoltsState = None):
+        # assert not bool(self.outputs)
+
         if new_state is None:
             new_state = self
+
 
         new_value = tuple([new_state]) + self.quiescence['quiescence'] if 'quiescence' in self.quiescence else tuple(
             [new_state])
@@ -83,7 +86,7 @@ class IoltsState(AutomatonState):
         return any(self.inputs.values())
 
     def is_input_enabled_for_diff_state(self, ) -> bool:
-        return all(self not in states for states in self.inputs.values()) and self.inputs
+        return any(self not in states for states in self.inputs.values()) and self.inputs
 
     def is_quiescence(self) -> bool:
         """
@@ -298,9 +301,9 @@ class IocoValidator:
                 new_test_state = self._new_test_state()
                 test_state.add_input("?quiescence", new_test_state)
                 follow_state.update({destination: new_test_state})
-            elif destination.is_quiescence() and (destination.is_input_enabled_for_diff_state() or not destination.inputs):
+            elif destination.is_quiescence():
                 test_state.add_input("?quiescence", self._new_passed_state())
-            else:
+            elif len(states) == 1: # TODO fix this later, need to find a better way this will break. Maybe ask Prof.
                 test_state.add_input("?quiescence", self._new_failed_state())
 
             for output in self.specification.get_output_alphabet():

@@ -1,6 +1,7 @@
 from aalpy.base import SUL
 from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IoltsMachine, IoltsState, MarkovChain
 
+QUIESCENCE = 'QUIESCENCE'
 
 class DfaSUL(SUL):
     """
@@ -182,42 +183,37 @@ class IoltsMachineSUL(SUL):
         pass
 
     def step(self, letter):
-        if letter == "QUIESCENCE":
+        if letter == QUIESCENCE:
             letter = "?quiescence"
         return self.iolts.step(letter)
 
-    def query(self, word: tuple) -> tuple[list, list]:
+    def query(self, word: tuple) -> str:
         self.pre()
 
-        middle_state = self.iolts.current_state
-        outputs = []
-        possible_outputs = []
-        enable_diff_state = []
+        is_valid = False
 
-        if not word:
-            possible_outputs.append([])
-            outputs.append(None)
-            enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
+        for _ in range(30):
+            self.pre()
+            is_valid = True
+            for letter in word:
+                if letter == QUIESCENCE:
+                    letter = 'quiescence'
+                is_valid = is_valid and self.iolts.step_to(letter) is not None
+            if is_valid:
+                break
+            self.post()
 
-        for letter in word:
-            if letter.startswith("?"):
-                output, middle_state = self.step(letter)
-                possible_outputs.append([key for key, _ in middle_state.get_outputs()])
-                enable_diff_state.append(middle_state.is_input_enabled_for_diff_state())
-                outputs.append(output)
-            if letter.startswith("!"):
-                self.iolts.current_state = middle_state
-                self.iolts.step_to(letter)
-                possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
-                enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
-                outputs.append(None)
-            if letter == 'QUIESCENCE':
-                possible_outputs.append([key for key, _ in self.iolts.current_state.get_outputs()])
-                enable_diff_state.append(self.iolts.current_state.is_input_enabled_for_diff_state())
-                outputs.append(None)
+        if not is_valid:
+            return None
 
+        output = self.iolts._output_step_to(None, None)
 
         self.post()
         self.num_queries += 1
         self.num_steps += len(word)
-        return outputs, possible_outputs, enable_diff_state
+        return output if output is not None else QUIESCENCE
+
+    def completeness_query(self, word: tuple, observed_set: set) -> bool:
+        # TODO, use some smart logic to reduce the number of query runs.
+        completeness_set = set([self.query(word) for _ in range(5)])
+        return observed_set == completeness_set

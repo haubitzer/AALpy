@@ -13,7 +13,11 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
     # Initialize (S,E,T)
     observation_table = ApproximatedIoltsObservationTable(input_alphabet, output_alphabet, sul)
 
-    while True and max_iteration > 1:
+    while True:
+        if not (max_iteration > 1):
+            print("Max iteration")
+            break
+
         max_iteration = max_iteration - 1
         is_reducible = False
 
@@ -28,11 +32,13 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
 
             while not (is_closed and is_consistent):
                 is_closed, s_set_causes = observation_table.is_globally_closed()
+                print("Closed S set: " + str(s_set_causes))
                 # TODO only add the shortest row that should improve the performancen
                 extend_set(observation_table.S, s_set_causes)
                 observation_table.update_obs_table()
 
                 is_consistent, e_set_causes = observation_table.is_globally_consistent()
+                print("Consistent E set: " + str(e_set_causes))
                 extend_set(observation_table.E, e_set_causes)
                 observation_table.update_obs_table()
 
