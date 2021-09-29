@@ -70,11 +70,24 @@ class IoltsState(AutomatonState):
         if new_state is None:
             new_state = self
 
-
         new_value = tuple([new_state]) + self.quiescence['quiescence'] if 'quiescence' in self.quiescence else tuple(
             [new_state])
         self.quiescence.update({'quiescence': tuple(set(list(new_value)))})
         self.transitions.update(self.quiescence)
+
+    def remove_input(self, input, new_state):
+        new_value = list(self.inputs[input])
+        if new_state in new_value:
+            new_value.remove(new_state)
+        self.inputs.update({input: tuple(new_value)})
+        self.transitions.update(self.inputs)
+
+    def remove_output(self, output, new_state):
+        new_value = list(self.outputs[output])
+        if new_state in new_value:
+            new_value.remove(new_state)
+        self.outputs.update({output: tuple(new_value)})
+        self.transitions.update(self.outputs)
 
     def is_input_enabled(self) -> bool:
         """
@@ -259,6 +272,7 @@ class IoltsMachine(Automaton):
         for state in self.states:
             state.make_input_complete(alphabet)
 
+
 class IocoValidator:
 
     def __init__(self, specification: IoltsMachine):
@@ -268,15 +282,18 @@ class IocoValidator:
         self.visited = []
         self.state_count = 0
 
-        self.passed_states = set();
-        self.failed_states = set();
+        self.passed_states = set()
+        self.failed_states = set()
 
-        self.initial_state = self._new_test_state()
+        self.initial_state = self._new_node_state()
         self._resolve_state(self.specification.initial_state, self.initial_state)
+
+        for state in self.states:
+            self._remove_false_state(state)
 
         self.automata: IoltsMachine = IoltsMachine(self.initial_state, self.states)
 
-    def _new_test_state(self, suffix: str = None):
+    def _new_node_state(self, suffix: str = None):
         self.state_count += 1
         if suffix:
             state = IoltsState(f't{self.state_count} {suffix}')
@@ -287,66 +304,187 @@ class IocoValidator:
         return state
 
     def _new_passed_state(self):
-        state = self._new_test_state("passed")
+        state = self._new_node_state("passed")
         self.passed_states.add(state)
         return state
 
     def _new_failed_state(self):
-        state = self._new_test_state("failed")
+        state = self._new_node_state("failed")
         self.failed_states.add(state)
         return state
 
     def _resolve_state(self, original_state: IoltsState, test_state: IoltsState):
-        self.visited.append(original_state)
 
         follow_state = dict()
 
         for input in self.specification.get_input_alphabet():
-            states = [state for _, state in original_state.get_inputs(input)]
+            destinations = [state for _, state in original_state.get_inputs(input)]
+            follow_state.update(self._resolve_inputs(original_state, test_state, destinations, input))
 
-            if not states:
-                test_state.add_output(input.replace("?", "!"), self._new_failed_state())
-            else:
-                new_test_state = self._new_test_state()
-                result = self._resolve_outputs(new_test_state, states)
+        for output in self.specification.get_output_alphabet():
+            destinations = [state for _, state in original_state.get_outputs(output)]
+            follow_state.update(self._resolve_outputs(original_state, test_state, destinations, output))
 
-                follow_state.update(result)
-                test_state.add_output(input.replace("?", "!"), new_test_state)
+        destinations = [state for _, state in original_state.get_quiescence()]
+        follow_state.update(self._resolve_quiescence(original_state, test_state, destinations))
 
-        self._resolve_outputs(test_state, [original_state])
-
-        for specification_state, ioco_state in follow_state.items():
+        self.visited.append(original_state)
+        for specification_state, new_test_state in follow_state.items():
             if specification_state not in self.visited:
-                self._resolve_state(specification_state, ioco_state)
+                self._resolve_state(specification_state, new_test_state)
 
-    def _resolve_outputs(self, test_state, states) -> dict:
+    def _resolve_inputs(self, original_state: IoltsState, test_state: IoltsState, destinations: list[IoltsState],
+                        letter: str) -> dict:
         follow_state = dict()
-        for destination in states:
 
-            if destination.is_quiescence() and destination.is_input_enabled_for_diff_state() and destination not in self.visited:
-                new_test_state = self._new_test_state()
-                test_state.add_input("?quiescence", new_test_state)
-                follow_state.update({destination: new_test_state})
-            elif destination.is_quiescence():
-                test_state.add_input("?quiescence", self._new_passed_state())
-            elif len(states) == 1: # TODO fix this later, need to find a better way this will break. Maybe ask Prof.
-                test_state.add_input("?quiescence", self._new_failed_state())
-
-            for output in self.specification.get_output_alphabet():
-                transitions = destination.outputs[output]
-
-                if not transitions:
-                    test_state.add_input(output.replace("!", "?"), self._new_failed_state())
-
-                for state in transitions:
-                    if state.is_quiescence() and not state.is_input_enabled_for_diff_state():
-                        test_state.add_input(output.replace("!", "?"), self._new_passed_state())
-                    else:
-                        new_test_state = self._new_test_state()
-                        test_state.add_input(output.replace("!", "?"), new_test_state)
-                        follow_state.update({state: new_test_state})
+        if not destinations:
+            test_state.add_output(input.replace("?", "!"), self._new_failed_state())
+        else:
+            new_test_state = self._new_node_state()
+            for state in destinations:
+                if state == original_state:
+                    test_state.add_output(letter.replace("?", "!"), test_state)
+                else:
+                    test_state.add_output(letter.replace("?", "!"), new_test_state)
+                    follow_state.update({state: new_test_state})
 
         return follow_state
+
+    def _resolve_outputs(self, original_state: IoltsState, test_state: IoltsState, destinations: list[IoltsState],
+                         letter: str) -> dict:
+        follow_state = dict()
+
+        if not destinations:
+            test_state.add_input(letter.replace("!", "?"), self._new_failed_state())
+        else:
+            new_test_state = self._new_node_state()
+            for state in destinations:
+                if state.is_quiescence() and not state.is_input_enabled_for_diff_state():
+                    test_state.add_input(letter.replace("!", "?"), self._new_passed_state())
+                else:
+                    test_state.add_input(letter.replace("!", "?"), new_test_state)
+                    follow_state.update({state: new_test_state})
+
+        return follow_state
+
+    def _resolve_quiescence(self, original_state: IoltsState, test_state: IoltsState,
+                            destinations: list[IoltsState]) -> dict:
+        follow_state = dict()
+
+        if not destinations:
+            test_state.add_input("?quiescence", self._new_failed_state())
+        else:
+            new_test_state = self._new_node_state()
+            for state in destinations:
+                if state.is_quiescence() and state.is_input_enabled_for_diff_state() and state not in self.visited:
+                    test_state.add_input("?quiescence", new_test_state)
+                elif state.is_quiescence():
+                    test_state.add_input("?quiescence", self._new_passed_state())
+
+        return follow_state
+
+    def build_automata(self, old_initial_test_state) -> IoltsMachine:
+
+        # reset
+        self.state_count = 0
+        build_initial_state = None
+        build_states = []
+
+        for state in self.states.copy():
+            new_state = self._post_processing(state)
+
+            if state == old_initial_test_state:
+                build_initial_state = new_state
+
+            build_states.append(new_state)
+
+        return IoltsMachine(build_initial_state, build_states)
+
+    def _post_merging(self, left: IoltsState, right: IoltsState):
+        merge_state = None
+
+        left_is_passed = left in self.passed_states
+        left_is_failed = left in self.failed_states
+        left_is_node = not left_is_passed and not left_is_failed
+
+        right_is_passed = right in self.passed_states
+        right_is_failed = right in self.failed_states
+        right_is_node = not right_is_passed and not right_is_failed
+
+        if left_is_node and right_is_node:
+            merge_state = self._new_node_state()
+
+        if left_is_passed or right_is_passed:
+            merge_state = self._new_passed_state()
+
+        if left_is_failed or right_is_failed:
+            merge_state = self._new_failed_state()
+
+        if left_is_node and right_is_passed:
+            assert "should not happen"
+
+        if left_is_node and right_is_failed:
+            assert "should not happen"
+
+        if left_is_passed and right_is_node:
+            assert "should not happen"
+
+        if left_is_failed and right_is_node:
+            assert "should not happen"
+
+        for input, state in left.get_inputs() + right.get_inputs():
+            merge_state.add_input(input, state)
+
+        for output, state in left.get_outputs() + right.get_outputs():
+            merge_state.add_input(output, state)
+
+        return merge_state
+
+    def _remove_false_state(self, original_state: IoltsState):
+        for input in self.specification.get_input_alphabet():
+            destinations = [state for _, state in original_state.get_outputs(input.replace('?', '!'))]
+
+            contains_failed = any(state in self.failed_states for state in destinations)
+            contains_non_failed = any(state not in self.failed_states for state in destinations)
+
+            if contains_failed and contains_non_failed:
+                for state in self.failed_states:
+                    original_state.remove_output(input.replace('?', '!'), state)
+
+        for output in self.specification.get_output_alphabet():
+            destinations = [state for _, state in original_state.get_inputs(output.replace('!', '?'))]
+
+            contains_failed = any(state in self.failed_states for state in destinations)
+            contains_non_failed = any(state not in self.failed_states for state in destinations)
+
+            if contains_failed and contains_non_failed:
+                for state in self.failed_states:
+                    original_state.remove_input(output.replace('!', '?'), state)
+
+    def _post_processing(self, original_state: IoltsState):
+        if original_state in self.passed_states:
+            return self._new_passed_state()
+
+        if original_state in self.failed_states:
+            return self._new_failed_state()
+
+        post_state = self._new_node_state()
+
+        for input in self.specification.get_input_alphabet():
+            destinations = [state for _, state in original_state.get_inputs(input)]
+            while destinations:
+                post_state = self._post_merging(post_state, destinations.pop())
+
+        for output in self.specification.get_output_alphabet():
+            destinations = [state for _, state in original_state.get_outputs(output)]
+            while destinations:
+                post_state = self._post_merging(post_state, destinations.pop())
+
+        destinations = [state for _, state in original_state.get_quiescence()]
+        while destinations:
+            post_state = self._post_merging(post_state, destinations.pop())
+
+        return post_state
 
     def check(self, sut: IoltsMachine) -> tuple[bool, tuple]:
         """

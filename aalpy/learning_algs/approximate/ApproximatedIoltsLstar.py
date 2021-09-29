@@ -57,17 +57,20 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
+        h_minus.make_input_complete()
+        h_plus.make_input_complete()
+
         # Use the Ioco validator to find counter examples
         is_ioco_minus, cex = IocoValidator(sul.iolts).check(h_minus)
         if not is_ioco_minus:
-            print("Found ioco counter example (SUL ioco H_minus): " + str(cex))
+            print("Found ioco counter example (H_minus ioco SUL): " + str(cex))
             cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
             extend_set(observation_table.E, cex_suffixes)
             continue
 
         is_ioco_plus, cex = IocoValidator(h_plus).check(sul.iolts)
         if not is_ioco_plus:
-            print("Found ioco counter example (H_plus ioco SUL ): " + str(cex))
+            print("Found ioco counter example (SUL ioco H_plus): " + str(cex))
             cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
             extend_set(observation_table.E, cex_suffixes)
             continue

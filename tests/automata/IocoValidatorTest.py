@@ -16,7 +16,7 @@ test_cases = [
     ("../../DotModels/Iolts/ioco/10_ioco_S.dot", "../../DotModels/Iolts/ioco/10_ioco_P.dot", True),
     ("../../DotModels/Iolts/ioco/11_ioco_S.dot", "../../DotModels/Iolts/ioco/11_ioco_P.dot", False),
     ("../../DotModels/Iolts/ioco/12_ioco_S.dot", "../../DotModels/Iolts/ioco/12_ioco_P.dot", True),
-
+    ("../../DotModels/Iolts/ioco/13_ioco_S.dot", "../../DotModels/Iolts/ioco/13_ioco_P.dot", True),
 ]
 
 
