@@ -1,17 +1,20 @@
-digraph {
+digraph "../../DotModels/Iolts/09_iolts" {
 s1 [label=s1];
 s2 [label=s2];
 s3 [label=s3];
 s4 [label=s4];
-
-
-s1 -> s2  [label="?req"];
+s1 -> s1  [label=quiescence];
 s1 -> s1  [label="?order"];
+s1 -> s2  [label="?req"];
 s2 -> s3  [label="!offer"];
-s3 -> s4  [label="?order"];
+s2 -> s2  [label="?req"];
+s2 -> s2  [label="?order"];
+s3 -> s3  [label=quiescence];
 s3 -> s3  [label="?req"];
+s3 -> s4  [label="?order"];
 s4 -> s1  [label="!canfirm"];
-
+s4 -> s4  [label="?req"];
+s4 -> s4  [label="?order"];
 __start0 [label="", shape=none];
 __start0 -> s1  [label=""];
 }

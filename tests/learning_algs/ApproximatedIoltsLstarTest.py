@@ -3,7 +3,7 @@ from unittest import TestCase
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine, IocoValidator
 from aalpy.learning_algs.approximate.ApproximatedIoltsLstar import run_approximated_Iolts_Lstar
-from aalpy.utils import load_automaton_from_file
+from aalpy.utils import load_automaton_from_file, save_automaton_to_file
 
 test_cases = [
     ("../../DotModels/Iolts/01_iolts.dot",),
@@ -27,6 +27,7 @@ class ApproximatedIoltsLstarTest(TestCase):
             print('#################################################################')
             print("Start testing: " + spec_path)
             specification: IoltsMachine = load_automaton_from_file(spec_path, 'iolts')
+
             sul = IoltsMachineSUL(specification)
 
             h_minus = None

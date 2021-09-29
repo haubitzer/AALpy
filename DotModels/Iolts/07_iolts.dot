@@ -1,19 +1,26 @@
-digraph learnedModel {
+digraph "../../DotModels/Iolts/07_iolts" {
 s0 [label=s0];
 s1 [label=s1];
 s2 [label=s2];
 s3 [label=s3];
 s4 [label=s4];
+s0 -> s0  [label=quiescence];
+s0 -> s0  [label="?c"];
 s0 -> s2  [label="?a"];
 s0 -> s1  [label="?b"];
-s0 -> s0  [label="?c"];
+s1 -> s1  [label=quiescence];
 s1 -> s1  [label="?a"];
 s1 -> s1  [label="?b"];
 s1 -> s3  [label="?c"];
+s2 -> s2  [label=quiescence];
 s2 -> s2  [label="?a"];
 s2 -> s2  [label="?b"];
 s2 -> s2  [label="?c"];
 s3 -> s4  [label="!y"];
+s3 -> s3  [label="?c"];
+s3 -> s3  [label="?b"];
+s3 -> s3  [label="?a"];
+s4 -> s4  [label=quiescence];
 s4 -> s4  [label="?a"];
 s4 -> s4  [label="?b"];
 s4 -> s4  [label="?c"];
