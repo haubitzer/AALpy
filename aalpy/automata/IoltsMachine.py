@@ -102,6 +102,11 @@ class IoltsState(AutomatonState):
         deterministic_output = all(len(states) == 1 for states in self.outputs.values())
         return deterministic_input and deterministic_output
 
+    def make_input_complete(self, alphabet: list):
+        for letter in alphabet:
+            if not self.get_inputs(letter):
+                self.add_input(letter, self)
+
 
 class IoltsMachine(Automaton):
     """
@@ -115,7 +120,8 @@ class IoltsMachine(Automaton):
         self.states: list[IoltsState]
 
     def step(self, letter):
-        # TODO what should happen if the state doesn't accept the given input?
+        assert self.is_input_complete()
+
         input = self._input_step_to(letter, None)
         middle_state = self.current_state
         output = self._output_step_to(None, None)
@@ -232,6 +238,26 @@ class IoltsMachine(Automaton):
                 explored.append(node)
         return ()
 
+    def is_input_complete(self) -> bool:
+        """
+        Check whether all states have defined transition for all inputs
+        :return: true if automaton is input complete
+
+        Returns:
+
+            True if input complete, False otherwise
+
+        """
+        alphabet = set(self.get_input_alphabet())
+        for state in self.states:
+            if state.inputs.keys() != alphabet:
+                return False
+        return True
+
+    def make_input_complete(self):
+        alphabet = self.get_input_alphabet()
+        for state in self.states:
+            state.make_input_complete(alphabet)
 
 class IocoValidator:
 
@@ -332,6 +358,8 @@ class IocoValidator:
         Returns: True if ioco holds False if ioco is violated
 
         """
+        assert sut.is_input_complete(), "Implementation needs to be input complete"
+
         for state in self.automata.states:
             if state not in self.passed_states and state not in self.failed_states:
                 continue

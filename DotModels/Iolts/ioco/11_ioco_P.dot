@@ -1,18 +1,16 @@
-digraph learnedModel {
+digraph "../../DotModels/Iolts/ioco/11_ioco_P" {
 s0 [label=s0];
 s1 [label=s1];
 s2 [label=s2];
 s4 [label=s4];
-s5 [label=s5];
-
+s0 -> s0  [label=quiescence];
 s0 -> s1  [label="?E"];
 s1 -> s2  [label="?E"];
 s1 -> s4  [label="!tea"];
 s2 -> s4  [label="!coffe"];
-
+s2 -> s2  [label="?E"];
+s4 -> s4  [label=quiescence];
 s4 -> s4  [label="?E"];
-
-s5 -> s2  [label="?E"];
 __start0 [label="", shape=none];
 __start0 -> s0  [label=""];
 }

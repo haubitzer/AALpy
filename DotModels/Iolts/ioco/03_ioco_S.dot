@@ -1,14 +1,17 @@
-digraph {
+digraph "../../DotModels/Iolts/ioco/03_ioco_S" {
 s1 [label=s1];
 s2 [label=s2];
 s3 [label=s3];
 s4 [label=s4];
-
-
+s1 -> s1  [label=quiescence];
 s1 -> s2  [label="?1"];
 s2 -> s3  [label="!coffee"];
 s2 -> s4  [label="!tea"];
-
+s2 -> s2  [label="?1"];
+s3 -> s3  [label=quiescence];
+s3 -> s3  [label="?1"];
+s4 -> s4  [label=quiescence];
+s4 -> s4  [label="?1"];
 __start0 [label="", shape=none];
 __start0 -> s1  [label=""];
 }

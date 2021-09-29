@@ -282,8 +282,10 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                     source.add_input(label, destination)
                 elif label.startswith('!'):
                     source.add_output(label, destination)
+                elif label == 'quiescence':
+                    pass
                 else:
-                    assert False, "No prefix found."
+                    raise Exception("Unknown Prefix: " + str(label))
             else: # moore or dfa
                 label = int(label) if label.isdigit() else label
                 source.transitions[label] = destination

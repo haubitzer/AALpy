@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from aalpy.automata import IoltsMachine, IocoValidator
-from aalpy.utils import load_automaton_from_file
+from aalpy.utils import load_automaton_from_file, save_automaton_to_file
 
 test_cases = [
     ("../../DotModels/Iolts/ioco/01_ioco_S.dot", "../../DotModels/Iolts/ioco/01_ioco_P.dot", True),
@@ -14,8 +14,8 @@ test_cases = [
     ("../../DotModels/Iolts/ioco/08_ioco_S.dot", "../../DotModels/Iolts/ioco/08_ioco_P.dot", True),
     ("../../DotModels/Iolts/ioco/09_ioco_S.dot", "../../DotModels/Iolts/ioco/09_ioco_P.dot", True),
     ("../../DotModels/Iolts/ioco/10_ioco_S.dot", "../../DotModels/Iolts/ioco/10_ioco_P.dot", True),
-    ("../../DotModels/Iolts/ioco/11_ioco_S.dot", "../../DotModels/Iolts/ioco/11_ioco_P.dot", True),  # Not sure if test 11 is really ioco
-    ("../../DotModels/Iolts/ioco/12_ioco_S.dot", "../../DotModels/Iolts/ioco/12_ioco_P.dot", True),  # Not sure if test 11 is really ioco
+    ("../../DotModels/Iolts/ioco/11_ioco_S.dot", "../../DotModels/Iolts/ioco/11_ioco_P.dot", False),
+    ("../../DotModels/Iolts/ioco/12_ioco_S.dot", "../../DotModels/Iolts/ioco/12_ioco_P.dot", True),
 
 ]
 
@@ -27,6 +27,7 @@ class IocoValidatorTest(TestCase):
             with self.subTest(msg="Checking if ioco relation between:", S=spec_path, P=impl_path, E=expect):
                 specification: IoltsMachine = load_automaton_from_file(spec_path, 'iolts')
                 implementation: IoltsMachine = load_automaton_from_file(impl_path, 'iolts')
+
                 actual, cex = IocoValidator(specification).check(implementation)
 
                 self.assertEqual(actual, expect, "Counter example: " + str(cex))

@@ -5,7 +5,7 @@ from ...SULs import IoltsMachineSUL
 from ...automata import IocoValidator, IoltsMachine
 
 
-def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul: IoltsMachineSUL, max_iteration: int = 30, print_level=2):
+def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, sul: IoltsMachineSUL, max_iteration: int = 50, print_level=2):
     """
 
     """
@@ -14,11 +14,11 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
     observation_table = ApproximatedIoltsObservationTable(input_alphabet, output_alphabet, sul)
 
     while True:
+        max_iteration -= 1
         if not (max_iteration > 1):
-            print("Max iteration")
+            print("Max iteration in OUTER loop")
             break
 
-        max_iteration = max_iteration - 1
         is_reducible = False
 
         while not is_reducible:
@@ -33,7 +33,6 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
             while not (is_closed and is_consistent):
                 is_closed, s_set_causes = observation_table.is_globally_closed()
                 print("Closed S set: " + str(s_set_causes))
-                # TODO only add the shortest row that should improve the performancen
                 extend_set(observation_table.S, s_set_causes)
                 observation_table.update_obs_table()
 
@@ -42,12 +41,17 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
                 extend_set(observation_table.E, e_set_causes)
                 observation_table.update_obs_table()
 
+                max_iteration -= 1
+                if not (max_iteration > 1):
+                    print("Max iteration in INNER loop")
+                    return h_minus, h_plus
+
             # Check quiescence reducible
             is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
             extend_set(observation_table.E, e_set_reducible)
             print("Found E by quiescence reducible: " + str(e_set_reducible))
 
-        print_observation_table(observation_table, "approximated")
+
 
         # Construct H- and H+
         h_minus = observation_table.gen_hypothesis_minus()
@@ -70,4 +74,7 @@ def run_approximated_Iolts_Lstar(input_alphabet: list, output_alphabet: list, su
 
         break
 
+    print_observation_table(observation_table, "approximated")
     return h_minus, h_plus
+
+
