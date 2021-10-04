@@ -1,5 +1,5 @@
 from .Dfa import Dfa, DfaState
-from .IoltsMachine import IoltsMachine, IoltsState, IocoValidator
+from .IoltsMachine import IoltsMachine, IoltsState
 from .Mdp import Mdp, MdpState
 from .MealyMachine import MealyMachine, MealyState
 from .MooreMachine import MooreMachine, MooreState

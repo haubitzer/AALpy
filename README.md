@@ -34,7 +34,7 @@ Whether you work with regular languages or you would like to learn models of
 </center>
 
 <!---
-You can use it to learn **deterministic finite automata**, **Moore machines**, 
+You can use it to learn **deterministic finite utils**, **Moore machines**, 
 and **Mealy machines** of deterministic systems. 
 If the system that you would like to learn shows non-deterministic or
 stochastic behavior, AALpy allows you to learn **observable
@@ -118,7 +118,7 @@ big_random_dfa = generate_random_dfa(alphabet=[1,2,3,4,5],num_states=2000, num_a
 # get input alphabet of the automaton
 alphabet = random_dfa.get_input_alphabet()
 
-# loaded or randomly generated automata are considered as BLACK-BOX that is queried
+# loaded or randomly generated utils are considered as BLACK-BOX that is queried
 # learning algorithm has no knowledge about its structure
 # create a SUL instance for the automaton/system under learning
 sul = DfaSUL(random_dfa)

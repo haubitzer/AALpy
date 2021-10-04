@@ -236,7 +236,7 @@ def generate_random_iolts(num_states, num_inputs, num_outputs, max_num_inputs_pe
       num_outputs: number of outputs
       max_num_inputs_per_state: maximal number of inputs per state (Default value = 1)
       max_num_outputs_per_state: maximal number of outputs per state (Default value = 1)
-      deterministic: if true the automata is deterministic if false the automata may be non-deterministic
+      deterministic: if true the utils is deterministic if false the utils may be non-deterministic
 
     Returns:
 
