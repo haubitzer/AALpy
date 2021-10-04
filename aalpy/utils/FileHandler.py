@@ -41,7 +41,7 @@ def visualize_automaton(automaton, path="LearnedModel", file_type='pdf', display
 def save_automaton_to_file(automaton, path="LearnedModel", file_type='dot',
                            display_same_state_trans=True):
     """
-    The Standard of the automata strictly follows the syntax found at: https://automata.cs.ru.nl/Syntax/Overview.
+    The Standard of the utils strictly follows the syntax found at: https://automata.cs.ru.nl/Syntax/Overview.
     For non-deterministic and stochastic systems syntax can be found on AALpy's Wiki.
 
     Args:

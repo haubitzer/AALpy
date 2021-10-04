@@ -1,3 +1,5 @@
+from typing import Optional
+
 from aalpy.base import SUL
 from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IoltsMachine, IoltsState, MarkovChain
 
@@ -183,11 +185,9 @@ class IoltsMachineSUL(SUL):
         pass
 
     def step(self, letter):
-        if letter == QUIESCENCE:
-            letter = "?quiescence"
         return self.iolts.step(letter)
 
-    def query(self, word: tuple) -> str:
+    def query(self, word: tuple) -> Optional[str]:
         self.pre()
 
         is_valid = False
@@ -215,5 +215,5 @@ class IoltsMachineSUL(SUL):
 
     def completeness_query(self, word: tuple, observed_set: set) -> bool:
         # TODO, use some smart logic to reduce the number of query runs.
-        completeness_set = set([self.query(word) for _ in range(5)])
+        completeness_set = set([self.query(word) for _ in range(50)])
         return observed_set == completeness_set

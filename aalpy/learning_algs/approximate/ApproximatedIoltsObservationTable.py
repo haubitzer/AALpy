@@ -5,12 +5,14 @@ from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsState, IoltsMachine
 
 EMPTY_WORD = tuple()
-QUIESCENCE = 'QUIESCENCE'
+QUIESCENCE = "QUIESCENCE"
 QUIESCENCE_TUPLE = tuple([QUIESCENCE])
 
 
 class ApproximatedIoltsObservationTable:
-    def __init__(self, input_alphabet: list, output_alphabet: list, sul: IoltsMachineSUL):
+    def __init__(
+        self, input_alphabet: list, output_alphabet: list, sul: IoltsMachineSUL
+    ):
         """
         Constructor of the observation table. Initial queries are asked in the constructor.
         """
@@ -59,9 +61,13 @@ class ApproximatedIoltsObservationTable:
         next_is_quiescence = next == QUIESCENCE
         next_in_T = next in self.row(s[:-1])[EMPTY_WORD]
 
-        valid_input = (prev_is_output or prev_is_quiescence or quiescence_in_T) and next_is_input
+        valid_input = (
+            prev_is_output or prev_is_quiescence or quiescence_in_T
+        ) and next_is_input
         valid_output = prev_is_input and next_is_output and next_in_T
-        valid_quiescence = quiescence_in_T and not prev_is_quiescence and next_is_quiescence
+        valid_quiescence = (
+            quiescence_in_T and not prev_is_quiescence and next_is_quiescence
+        )
 
         return valid_input or valid_output or valid_quiescence
 
@@ -99,13 +105,23 @@ class ApproximatedIoltsObservationTable:
                 if not self.row_is_defined(s1 + a) or not self.row_is_defined(s2 + a):
                     continue
 
-                if self.row(s1) == self.row(s2) and self.row(s1 + a)[e] != self.row(s2 + a)[e]:
+                if (
+                    self.row(s1) == self.row(s2)
+                    and self.row(s1 + a)[e] != self.row(s2 + a)[e]
+                ):
                     causes_of_inconsistency.append(a + e)
-                    return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
+                    return len(causes_of_inconsistency) == 0, list(
+                        set(causes_of_inconsistency)
+                    )
 
-                if self.row_plus(s1) == self.row_plus(s2) and self.row_plus(s1 + a)[e] != self.row_plus(s2 + a)[e]:
+                if (
+                    self.row_plus(s1) == self.row_plus(s2)
+                    and self.row_plus(s1 + a)[e] != self.row_plus(s2 + a)[e]
+                ):
                     causes_of_inconsistency.append(a + e)
-                    return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
+                    return len(causes_of_inconsistency) == 0, list(
+                        set(causes_of_inconsistency)
+                    )
 
         return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
 
@@ -122,8 +138,12 @@ class ApproximatedIoltsObservationTable:
             while wait:
                 s1, s2, t = wait.pop(0)
 
-                s1_cell_values = [(out,) for out in self.row(s1)[EMPTY_WORD]] + self.A_input
-                s2_cell_values = [(out,) for out in self.row(s2)[EMPTY_WORD]] + self.A_input
+                s1_cell_values = [
+                    (out,) for out in self.row(s1)[EMPTY_WORD]
+                ] + self.A_input
+                s2_cell_values = [
+                    (out,) for out in self.row(s2)[EMPTY_WORD]
+                ] + self.A_input
 
                 for a in s2_cell_values:
                     if a not in s1_cell_values:
@@ -137,7 +157,12 @@ class ApproximatedIoltsObservationTable:
                         if self.row_plus(s) == self.row_plus(s2 + a):
                             s_prime_2 = s
 
-                    if s_prime_1 != s_prime_2 and (s_prime_1, s_prime_2) not in past and s_prime_1 is not None and s_prime_2 is not None:
+                    if (
+                        s_prime_1 != s_prime_2
+                        and (s_prime_1, s_prime_2) not in past
+                        and s_prime_1 is not None
+                        and s_prime_2 is not None
+                    ):
                         wait.append((s_prime_1, s_prime_2, t + a))
 
                 past.append((s1, s2))
@@ -171,10 +196,8 @@ class ApproximatedIoltsObservationTable:
         update_E = e_set if e_set is not None else self.E
 
         for s, e in itertools.product(update_S, update_E):
-            # If cell is marked as completed the loop can continue
-            if not self.row_is_defined(s + e):
-                continue
 
+            # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
                 continue
 
@@ -207,18 +230,17 @@ class ApproximatedIoltsObservationTable:
         for s, e in itertools.product(update_S, update_E):
             self.T[s].update(dict(sorted(self.T[s].items())))
 
-
     def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
 
-        chaos_quiescence_state = IoltsState('Xq')
+        chaos_quiescence_state = IoltsState("Xq")
         chaos_quiescence_state.add_quiescence(chaos_quiescence_state)
 
         # create states based on S set
         for stateCounter, s in enumerate(self.S):
-            state = IoltsState(f's{stateCounter}')
+            state = IoltsState(f"s{stateCounter}")
             state.prefix = s
             row = self.row(s)
 
@@ -246,7 +268,9 @@ class ApproximatedIoltsObservationTable:
                     destination_state = state_distinguish[str(row)]
                     state.add_output(o, destination_state)
 
-        automaton = IoltsMachine(initial_state, list(states_dict.values()) + [chaos_quiescence_state]) # TODO change ti distiguish but need to restructe the state is because of the Ioco checker
+        automaton = IoltsMachine(
+            initial_state, list(states_dict.values()) + [chaos_quiescence_state]
+        )  # TODO change ti distinguish but need to rebuild the state is because of the Ioco checker
         automaton.characterization_set = self.E
 
         return automaton
@@ -256,8 +280,8 @@ class ApproximatedIoltsObservationTable:
         states_dict = dict()
         initial_state = None
 
-        chaos_state = IoltsState('X')
-        chaos_quiescence_state = IoltsState('Xq')
+        chaos_state = IoltsState("X")
+        chaos_quiescence_state = IoltsState("Xq")
 
         for output in self.A_output:
             chaos_state.add_output(output[0], chaos_state)
@@ -267,7 +291,7 @@ class ApproximatedIoltsObservationTable:
 
         # create states based on S set
         for stateCounter, s in enumerate(self.S):
-            state = IoltsState(f's{stateCounter}')
+            state = IoltsState(f"s{stateCounter}")
             state.prefix = s
             row = self.row_plus(s)
 
@@ -300,7 +324,10 @@ class ApproximatedIoltsObservationTable:
                     else:
                         state.add_output(output, chaos_state)
 
-        automaton = IoltsMachine(initial_state, list(states_dict.values()) + [chaos_quiescence_state, chaos_state])
+        automaton = IoltsMachine(
+            initial_state,
+            list(states_dict.values()) + [chaos_quiescence_state, chaos_state],
+        )
         automaton.characterization_set = self.E
 
         return automaton

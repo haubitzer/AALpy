@@ -2,13 +2,17 @@ digraph "../../DotModels/Iolts/08_iolts" {
 s1 [label=s1];
 s2 [label=s2];
 s3 [label=s3];
+s4 [label=s4];
+s5 [label=s5];
 s1 -> s1  [label=quiescence];
 s1 -> s2  [label="?a"];
 s2 -> s2  [label=quiescence];
 s2 -> s3  [label="?a"];
 s3 -> s1  [label="!x"];
 s3 -> s3  [label="?a"];
-s3 -> s3  [label="!y"];
+s3 -> s4  [label="!y"];
+s4 -> s5  [label="?a"];
+s5 -> s5  [label="?a"];
 __start0 [label="", shape=none];
 __start0 -> s1  [label=""];
 }

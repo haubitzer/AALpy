@@ -5,7 +5,7 @@ from aalpy.base import SUL
 
 class TomitaSUL(SUL):
     """
-    Tomita grammars are often used as a benchmark for automata-related challenges. Simple SUL that implements all 7
+    Tomita grammars are often used as a benchmark for utils-related challenges. Simple SUL that implements all 7
     Tomita grammars and enables their learning.
     """
 
