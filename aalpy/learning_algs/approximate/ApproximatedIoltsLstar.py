@@ -5,16 +5,16 @@ from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
-from aalpy.utils import IocoChecker
 from aalpy.utils.HelperFunctions import extend_set, print_observation_table
 
 
 def run_approximated_Iolts_Lstar(
-    input_alphabet: list,
-    output_alphabet: list,
-    sul: IoltsMachineSUL,
-    max_iteration: int = 30,
-    print_level=2,
+        input_alphabet: list,
+        output_alphabet: list,
+        sul: IoltsMachineSUL,
+        oracle,
+        max_iteration: int = 30,  # TODO remove and throw error in case of max iteration
+        print_level=2,
 ):
     """ """
     h_minus = None
@@ -67,28 +67,15 @@ def run_approximated_Iolts_Lstar(
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
-        h_minus.make_input_complete()
-        h_plus.make_input_complete()
-
-        # Use the Ioco validator to find counter examples
-        is_ioco_minus, cex = IocoChecker(sul.iolts).check(h_minus)
-        if not is_ioco_minus:
-            print("Found ioco counter example (H_minus ioco SUL): " + str(cex))
-            cex_suffixes = longest_prefix_cex_processing(
-                observation_table.S + list(observation_table.s_dot_a()), cex[:-1]
-            )
+        # Find counter example with precision oracle
+        cex = oracle.find_cex(h_plus, h_minus, observation_table)
+        if cex is not None:
+            cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()),
+                                                         cex)
             extend_set(observation_table.E, cex_suffixes)
             continue
 
-        is_ioco_plus, cex = IocoChecker(h_plus).check(sul.iolts)
-        if not is_ioco_plus:
-            print("Found ioco counter example (SUL ioco H_plus): " + str(cex))
-            cex_suffixes = longest_prefix_cex_processing(
-                observation_table.S + list(observation_table.s_dot_a()), cex[:-1]
-            )
-            extend_set(observation_table.E, cex_suffixes)
-            continue
-
+        # Stop learning loop because hypotheses are good enough
         break
 
     print_observation_table(observation_table, "approximated")
