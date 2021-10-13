@@ -68,7 +68,7 @@ def run_approximated_Iolts_Lstar(
         h_plus = observation_table.gen_hypothesis_plus()
 
         # Find counter example with precision oracle
-        cex = oracle.find_cex(h_plus, h_minus, observation_table)
+        cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
             cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()),
                                                          cex)
