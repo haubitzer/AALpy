@@ -4,7 +4,7 @@ from typing import Optional
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine
 from aalpy.base import SUL
-from aalpy.utils import IocoChecker, ModelChecker
+from aalpy.utils import IocoChecker, Mcrl2ModelChecker
 from aalpy.utils import visualize_automaton
 
 
@@ -111,12 +111,12 @@ class UserInputPrecisionOracle:
         return True
 
 
-class BlackBoxPrecisionOracle:
+class ModelCheckerPrecisionOracle:
     """
     Uses the model checker to find counter examples
     """
 
-    def __init__(self, sul: SUL, model_checker: ModelChecker):
+    def __init__(self, sul: SUL, model_checker: Mcrl2ModelChecker):
         self.sul = sul
         self.model_checker = model_checker
 
@@ -132,7 +132,7 @@ class BlackBoxPrecisionOracle:
 
         # TODO are safety properties also binding for h_minus
         # Safety properties needs to hold for upper hypothesis, but are they also valid for the lower hypothesis.
-        # We think that, it doesn't make sense to check liveness on the upper H, because the chaos state is always live.
+        # However, we think that, it doesn't make sense to check liveness on the upper H, because the chaos state is always live.
 
         is_safe, cex, safety_property = self.model_checker.check_safety_properties(h_plus)
         if not is_safe:

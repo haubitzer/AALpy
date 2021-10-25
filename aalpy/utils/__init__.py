@@ -6,4 +6,4 @@ from .HelperFunctions import smm_to_mdp_conversion
 from .BenchmarkSULs import *
 from .DataHandler import *
 from .IocoChecker import IocoChecker
-from .ModelChecker import ModelChecker
+from .Mcrl2ModelChecker import Mcrl2ModelChecker, Mcrl2Converter
