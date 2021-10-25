@@ -4,7 +4,7 @@ from typing import Optional
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine
 from aalpy.base import SUL
-from aalpy.utils import IocoChecker
+from aalpy.utils import IocoChecker, ModelChecker
 from aalpy.utils import visualize_automaton
 
 
