@@ -209,6 +209,8 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
 
             if 'label' in n.get_attributes().keys():
                 label = _process_label(n.get_attributes()['label'])
+            else:
+                label = node_name
 
             if node_class == MdpState:
                 result[node_name] = node_class(node_name, label)
@@ -315,9 +317,11 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
 
 def _process_label(label: str) -> str:
     label = label.strip()
-    if label[0] == '\"' and label[-1] == label[0]:
+    if not label:
+        label = ""
+    elif label[0] == '\"' and label[-1] == label[0]:
         label = label[1:-1]
-    if label[0] == '{' and label[-1] == '}':
+    elif label[0] == '{' and label[-1] == '}':
         label = label[1:-1]
     label = label.replace(" ", "")
     return label

@@ -1,0 +1,2 @@
+[true* . out_acousticAlarm_ON . !(out_wait_30 || in_unlock)*.  out_acousticAlarm_OFF] false
+

@@ -5,7 +5,7 @@ from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
-from aalpy.utils.HelperFunctions import extend_set, print_observation_table
+from aalpy.utils.HelperFunctions import extend_set, print_observation_table, all_suffixes
 
 
 def run_approximated_Iolts_Lstar(
@@ -32,7 +32,6 @@ def run_approximated_Iolts_Lstar(
             break
 
         is_reducible = False
-
         while not is_reducible:
 
             # Update (S,E,T)
@@ -63,20 +62,30 @@ def run_approximated_Iolts_Lstar(
             extend_set(observation_table.E, e_set_reducible)
             print("Found E by quiescence reducible: " + str(e_set_reducible))
 
+        print_observation_table(observation_table, "approximated")
+
         # Construct H- and H+
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
+        # TODO merge quiescence states
+        # The h_plus automata may has two state that are connected via an quiescence transition if that is the case we
+        # should merge this two states together, this would improve the readability of the automata.
+
+        # TODO check merged states aka. rows for completeness
+        # As discussed, there could be the case that a state doesn't lead to the chaos state even if it should,
+        # the reason for that is that state is enabled by two different traces but only one is in the observation table represented,
+        # The other is not. However, the not-represented trace is never checked for completeness.
+        # We should somehow check if a state is enabled by traces not in the observation table and check this traces for completeness.
+
         # Find counter example with precision oracle
         cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
-            cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()),
-                                                         cex)
-            extend_set(observation_table.E, cex_suffixes)
+            extend_set(observation_table.E, all_suffixes(cex))
             continue
-
-        # Stop learning loop because hypotheses are good enough
-        break
+        else:
+            # Stop learning loop, hypotheses are good enough.
+            break
 
     print_observation_table(observation_table, "approximated")
     return h_minus, h_plus

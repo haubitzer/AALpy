@@ -1,0 +1,2 @@
+<in_lock . in_close . out_wait_20 . out_alarmArmed_ON> true &&
+<in_close . in_lock . out_wait_20 . out_alarmArmed_ON> true

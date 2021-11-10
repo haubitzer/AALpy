@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import string
 from collections import defaultdict
 from copy import deepcopy
@@ -19,7 +20,7 @@ class IoltsState(AutomatonState):
         self.add_quiescence(None)
 
     def get_inputs(
-        self, input: string = None, destination: IoltsState = None
+            self, input: string = None, destination: IoltsState = None
     ) -> list[tuple[str, IoltsState]]:
         assert input is None or input.startswith("?")
 
@@ -40,7 +41,7 @@ class IoltsState(AutomatonState):
         return result
 
     def get_outputs(
-        self, output: string = None, destination: IoltsState = None
+            self, output: string = None, destination: IoltsState = None
     ) -> list[tuple[str, IoltsState]]:
         assert output is None or output.startswith("!")
 
@@ -143,10 +144,10 @@ class IoltsState(AutomatonState):
         return any(self.inputs.values())
 
     def is_input_enabled_for_diff_state(
-        self,
+            self,
     ) -> bool:
         return (
-            any(self not in states for states in self.inputs.values()) and self.inputs
+                any(self not in states for states in self.inputs.values()) and self.inputs
         )
 
     def is_quiescence(self) -> bool:
@@ -162,6 +163,16 @@ class IoltsState(AutomatonState):
         deterministic_input = all(len(states) == 1 for states in self.inputs.values())
         deterministic_output = all(len(states) == 1 for states in self.outputs.values())
         return deterministic_input and deterministic_output
+
+    def get_diff_state_transitions(self) -> list:
+        """
+        Returns a list of transitions that lead to new states, not same-state transitions.
+        """
+        transitions = []
+        for trans, states in self.transitions.items():
+            if self not in states:
+                transitions.append(trans)
+        return transitions
 
 
 class IoltsMachine(Automaton):
@@ -197,8 +208,42 @@ class IoltsMachine(Automaton):
 
         raise Exception("Unable to match letter")
 
+    def random_unroll_step(self) -> tuple[list[str], list[IoltsState]]:
+        """
+        This step function make a self loop transition if possible and a random transition to a different state.
+        Quiescence does not count as transition. Non-det may lead to an execption.
+
+        If no transition are possible the function return two empty lists.
+        """
+        same_state_trans = self.current_state.get_same_state_transitions()
+        diff_state_trans = self.current_state.get_diff_state_transitions()
+
+        if 'quiescence' in same_state_trans: same_state_trans.remove('quiescence')
+        if 'quiescence' in diff_state_trans: diff_state_trans.remove('quiescence')
+
+        trace = []
+        visited = []
+
+        if same_state_trans:
+            letter = choice(same_state_trans)
+            self.step_to(letter, self.current_state)
+            trace.append(letter)
+            visited.append(self.current_state)
+
+        if diff_state_trans:
+            old_current_state = self.current_state
+            letter = choice(diff_state_trans)
+            self.step_to(letter)
+            trace.append(letter)
+            visited.append(self.current_state)
+
+            if old_current_state == self.current_state:
+                raise Exception("Different state transition was not successful")
+
+        return trace, visited
+
     def _input_step_to(
-        self, input: str, destination: IoltsState = None
+            self, input: str, destination: IoltsState = None
     ) -> Optional[str]:
         transitions = self.current_state.get_inputs(input, destination)
         if not transitions:
@@ -208,7 +253,7 @@ class IoltsMachine(Automaton):
         return key
 
     def _output_step_to(
-        self, output: Optional[str], destination: IoltsState = None
+            self, output: Optional[str], destination: IoltsState = None
     ) -> Optional[str]:
         transitions = self.current_state.get_outputs(output, destination)
         if not transitions:
@@ -247,7 +292,7 @@ class IoltsMachine(Automaton):
         return list(set(result))
 
     def get_shortest_path(
-        self, origin_state: AutomatonState, target_state: AutomatonState
+            self, origin_state: AutomatonState, target_state: AutomatonState
     ) -> tuple:
         """
         Breath First Search over the automaton
@@ -321,3 +366,8 @@ class IoltsMachine(Automaton):
         alphabet = self.get_input_alphabet()
         for state in self.states:
             state.make_input_complete(alphabet)
+
+    def remove_self_loops_for_non_quiescence_states(self):
+        for state, letter in itertools.product(self.states, self.get_input_alphabet()):
+            if not state.is_quiescence():
+                state.remove_input(letter, state)

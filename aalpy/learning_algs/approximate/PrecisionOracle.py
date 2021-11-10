@@ -121,28 +121,28 @@ class ModelCheckerPrecisionOracle:
         self.model_checker = model_checker
 
     def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[tuple]:
-        h_minus.make_input_complete()
-        h_plus.make_input_complete()
-
-        # TODO counter example on SUL
+        # TODO counter example on SUL, who is responsible?
         # check if the property holds on the SUL, this should be done by running the counter example on the SUL.
         # However, to run the counter example on the SUL we need to have a step_to function again. If the counter example
         # doesn't hold on the SUL, we found a bug in the SUL or the property is wrong. This means that we need to stop learning,
         # It is not clear how to recover from that error, so we need to throw an assert.
 
-        # TODO are safety properties also binding for h_minus
+        # TODO are safety properties also binding for h_minus?
         # Safety properties needs to hold for upper hypothesis, but are they also valid for the lower hypothesis.
         # However, we think that, it doesn't make sense to check liveness on the upper H, because the chaos state is always live.
+
+        h_minus.remove_self_loops_for_non_quiescence_states()
+        h_plus.remove_self_loops_for_non_quiescence_states()
 
         is_safe, cex, safety_property = self.model_checker.check_safety_properties(h_plus)
         if not is_safe:
             print("Found safety property counter example: " + str(cex))
-            return cex,
+            return cex
 
         is_live, cex, liveness_property = self.model_checker.check_liveness_properties(h_minus)
         if not is_live:
             print("Found liveness property counter example: " + str(cex))
-            return cex,
+            return cex
 
         return None
 

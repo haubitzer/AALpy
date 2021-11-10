@@ -64,7 +64,7 @@ class ApproximatedIoltsObservationTable:
         valid_input = (
                               prev_is_output or prev_is_quiescence or quiescence_in_T
                       ) and next_is_input
-        valid_output = prev_is_input and next_is_output and next_in_T
+        valid_output = (prev_is_input or prev_is_output) and next_is_output and next_in_T
         valid_quiescence = (
                 quiescence_in_T and not prev_is_quiescence and next_is_quiescence
         )
@@ -314,6 +314,11 @@ class ApproximatedIoltsObservationTable:
 
                 if output in self.row(s)[EMPTY_WORD]:
                     row = self.row_plus(s + output_tuple)
+
+                    # TODO row may not be valid
+                    # For some unknown reason the row is not valid here, and could not be used as a key in distinguish.
+                    # The cause it not known and a fix is also not known.
+
                     if output_tuple == QUIESCENCE_TUPLE:
                         state.add_quiescence(state_distinguish.get(str(row)))
                     else:
