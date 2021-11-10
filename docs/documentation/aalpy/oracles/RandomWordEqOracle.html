@@ -36,20 +36,8 @@
                         <li>
                                 <a class="function" href="#RandomWordEqOracle.find_cex">find_cex</a>
                         </li>
-                </ul>
-
-            </li>
-            <li>
-                    <a class="class" href="#UnseenOutputRandomWordEqOracle">UnseenOutputRandomWordEqOracle</a>
-                            <ul class="memberlist">
                         <li>
-                                <a class="function" href="#UnseenOutputRandomWordEqOracle.__init__">UnseenOutputRandomWordEqOracle</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#UnseenOutputRandomWordEqOracle.find_cex">find_cex</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#UnseenOutputRandomWordEqOracle.reset_counter">reset_counter</a>
+                                <a class="function" href="#RandomWordEqOracle.reset_counter">reset_counter</a>
                         </li>
                 </ul>
 
@@ -72,9 +60,11 @@
                 
                         <details>
             <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">aalpy.automata</span> <span class="kn">import</span> <span class="n">Onfsm</span><span class="p">,</span> <span class="n">Mdp</span>
+            <div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">aalpy.automata</span> <span class="kn">import</span> <span class="n">Onfsm</span><span class="p">,</span> <span class="n">Mdp</span><span class="p">,</span> <span class="n">StochasticMealyMachine</span>
 <span class="kn">from</span> <span class="nn">aalpy.base</span> <span class="kn">import</span> <span class="n">Oracle</span><span class="p">,</span> <span class="n">SUL</span>
 <span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">randint</span><span class="p">,</span> <span class="n">choice</span>
+
+<span class="n">automaton_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">Onfsm</span><span class="p">:</span> <span class="s1">&#39;onfsm&#39;</span><span class="p">,</span> <span class="n">Mdp</span><span class="p">:</span> <span class="s1">&#39;mdp&#39;</span><span class="p">,</span> <span class="n">StochasticMealyMachine</span><span class="p">:</span> <span class="s1">&#39;smm&#39;</span><span class="p">}</span>
 
 
 <span class="k">class</span> <span class="nc">RandomWordEqOracle</span><span class="p">(</span><span class="n">Oracle</span><span class="p">):</span>
@@ -106,66 +96,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span> <span class="o">=</span> <span class="n">max_walk_len</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span> <span class="o">=</span> <span class="n">reset_after_cex</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">find_cex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hypothesis</span><span class="p">):</span>
-
-        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span><span class="p">:</span>
-            <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">reset_hyp_and_sul</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">+=</span> <span class="mi">1</span>
-
-            <span class="n">num_steps</span> <span class="o">=</span> <span class="n">randint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_walk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span><span class="p">)</span>
-
-            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_steps</span><span class="p">):</span>
-                <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphabet</span><span class="p">))</span>
-
-                <span class="n">out_sul</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">num_steps</span> <span class="o">+=</span> <span class="mi">1</span>
-
-                <span class="k">if</span> <span class="n">out_sul</span> <span class="o">!=</span> <span class="n">out_hyp</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-
-                    <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">post</span><span class="p">()</span>
-                    <span class="k">return</span> <span class="n">inputs</span>
-
-        <span class="k">return</span> <span class="kc">None</span>
-
-
-<span class="k">class</span> <span class="nc">UnseenOutputRandomWordEqOracle</span><span class="p">(</span><span class="n">Oracle</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    This variation of random word equivalence oracle can be used when learning stochastic or non-deterministic systems.</span>
-<span class="sd">    It uses step_to method of the hypothesis. With this method walk trough, the hypothesis is performed, based on the</span>
-<span class="sd">    outputs of the SUL. If our hypothesis cannot step to the new state-based on random input and SULs output,</span>
-<span class="sd">    a counterexample is returned.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphabet</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">num_walks</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">min_walk_len</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_walk_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                 <span class="n">reset_after_cex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Args:</span>
-<span class="sd">            alphabet: input alphabet</span>
-
-<span class="sd">            sul: system under learning</span>
-
-<span class="sd">            num_walks: number of walks to perform during search for cex</span>
-
-<span class="sd">            min_walk_len: minimum length of each walk</span>
-
-<span class="sd">            max_walk_len: maximum length of each walk</span>
-
-<span class="sd">            reset_after_cex: if True, num_walks will be preformed after every counter example, else the total number</span>
-<span class="sd">                or walks will equal to num_walks</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">alphabet</span><span class="p">,</span> <span class="n">sul</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span> <span class="o">=</span> <span class="n">num_walks</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">min_walk_len</span> <span class="o">=</span> <span class="n">min_walk_len</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span> <span class="o">=</span> <span class="n">max_walk_len</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span> <span class="o">=</span> <span class="n">reset_after_cex</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-
-    <span class="k">def</span> <span class="nf">find_cex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hypothesis</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">=</span> <span class="n">automaton_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">),</span> <span class="s1">&#39;det&#39;</span><span class="p">)</span>
 
         <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span><span class="p">:</span>
             <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
@@ -179,20 +114,26 @@
                 <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphabet</span><span class="p">))</span>
 
                 <span class="n">out_sul</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sul</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;det&#39;</span><span class="p">:</span>
+                    <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_sul</span><span class="p">)</span>
+                    <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sul</span><span class="p">)</span>
+
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_steps</span> <span class="o">+=</span> <span class="mi">1</span>
 
-                <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_sul</span><span class="p">)</span>
-
-                <span class="k">if</span> <span class="n">out_hyp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;det&#39;</span> <span class="ow">and</span> <span class="n">out_sul</span> <span class="o">!=</span> <span class="n">out_hyp</span><span class="p">:</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
 
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">,</span> <span class="n">Onfsm</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">post</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">inputs</span>
+                <span class="k">elif</span> <span class="n">out_hyp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;onfsm&#39;</span><span class="p">:</span>
                         <span class="k">return</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="c1"># hypothesis is MDP or SMM</span>
-                        <span class="n">cex</span> <span class="o">=</span> <span class="p">[</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">output</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">,</span> <span class="n">Mdp</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+                        <span class="n">cex</span> <span class="o">=</span> <span class="p">[</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">output</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;mdp&#39;</span> <span class="k">else</span> <span class="p">[]</span>
                         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
                             <span class="n">cex</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">o</span><span class="p">])</span>
                         <span class="k">return</span> <span class="n">cex</span>
@@ -247,11 +188,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span> <span class="o">=</span> <span class="n">max_walk_len</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span> <span class="o">=</span> <span class="n">reset_after_cex</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">find_cex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hypothesis</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">=</span> <span class="n">automaton_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">),</span> <span class="s1">&#39;det&#39;</span><span class="p">)</span>
 
         <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span><span class="p">:</span>
             <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reset_hyp_and_sul</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">+=</span> <span class="mi">1</span>
 
@@ -261,17 +206,35 @@
                 <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphabet</span><span class="p">))</span>
 
                 <span class="n">out_sul</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;det&#39;</span><span class="p">:</span>
+                    <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_sul</span><span class="p">)</span>
+                    <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sul</span><span class="p">)</span>
+
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_steps</span> <span class="o">+=</span> <span class="mi">1</span>
 
-                <span class="k">if</span> <span class="n">out_sul</span> <span class="o">!=</span> <span class="n">out_hyp</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;det&#39;</span> <span class="ow">and</span> <span class="n">out_sul</span> <span class="o">!=</span> <span class="n">out_hyp</span><span class="p">:</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
 
                     <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">post</span><span class="p">()</span>
                     <span class="k">return</span> <span class="n">inputs</span>
+                <span class="k">elif</span> <span class="n">out_hyp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;onfsm&#39;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># hypothesis is MDP or SMM</span>
+                        <span class="n">cex</span> <span class="o">=</span> <span class="p">[</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">output</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;mdp&#39;</span> <span class="k">else</span> <span class="p">[]</span>
+                        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+                            <span class="n">cex</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">o</span><span class="p">])</span>
+                        <span class="k">return</span> <span class="n">cex</span>
 
         <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">reset_counter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
 </pre></div>
 
         </details>
@@ -320,6 +283,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span> <span class="o">=</span> <span class="n">max_walk_len</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span> <span class="o">=</span> <span class="n">reset_after_cex</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">=</span> <span class="kc">None</span>
 </pre></div>
 
         </details>
@@ -353,9 +317,12 @@ reset_after_cex: if True, num_walks will be preformed after every counter exampl
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">find_cex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hypothesis</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">=</span> <span class="n">automaton_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">),</span> <span class="s1">&#39;det&#39;</span><span class="p">)</span>
 
         <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span><span class="p">:</span>
             <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reset_hyp_and_sul</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">+=</span> <span class="mi">1</span>
 
@@ -365,236 +332,26 @@ reset_after_cex: if True, num_walks will be preformed after every counter exampl
                 <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphabet</span><span class="p">))</span>
 
                 <span class="n">out_sul</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;det&#39;</span><span class="p">:</span>
+                    <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_sul</span><span class="p">)</span>
+                    <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sul</span><span class="p">)</span>
+
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_steps</span> <span class="o">+=</span> <span class="mi">1</span>
 
-                <span class="k">if</span> <span class="n">out_sul</span> <span class="o">!=</span> <span class="n">out_hyp</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;det&#39;</span> <span class="ow">and</span> <span class="n">out_sul</span> <span class="o">!=</span> <span class="n">out_hyp</span><span class="p">:</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
 
                     <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">post</span><span class="p">()</span>
                     <span class="k">return</span> <span class="n">inputs</span>
-
-        <span class="k">return</span> <span class="kc">None</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Return a counterexample (inputs) that displays different behavior on system under learning and
-current hypothesis.</p>
-
-<p>Args:</p>
-
-<p>hypothesis: current hypothesis</p>
-
-<p>Returns:</p>
-
-<pre><code>tuple or list containing counterexample inputs, None if no counterexample is found
-</code></pre>
-</div>
-
-
-                            </div>
-                            <div class="inherited">
-                                <h5>Inherited Members</h5>
-                                <dl>
-                                    <div><dt><a href="../base/Oracle.html#Oracle">aalpy.base.Oracle.Oracle</a></dt>
-                                <dd id="RandomWordEqOracle.reset_hyp_and_sul" class="function"><a href="../base/Oracle.html#Oracle.reset_hyp_and_sul">reset_hyp_and_sul</a></dd>
-
-            </div>
-                                </dl>
-                            </div>
-                </section>
-                <section id="UnseenOutputRandomWordEqOracle">
-                                <div class="attr class">
-        <a class="headerlink" href="#UnseenOutputRandomWordEqOracle">#&nbsp;&nbsp</a>
-
-        
-        <span class="def">class</span>
-        <span class="name">UnseenOutputRandomWordEqOracle</span>(<span class="base"><a href="../base/Oracle.html#Oracle">aalpy.base.Oracle.Oracle</a></span>):
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">UnseenOutputRandomWordEqOracle</span><span class="p">(</span><span class="n">Oracle</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    This variation of random word equivalence oracle can be used when learning stochastic or non-deterministic systems.</span>
-<span class="sd">    It uses step_to method of the hypothesis. With this method walk trough, the hypothesis is performed, based on the</span>
-<span class="sd">    outputs of the SUL. If our hypothesis cannot step to the new state-based on random input and SULs output,</span>
-<span class="sd">    a counterexample is returned.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphabet</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">num_walks</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">min_walk_len</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_walk_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                 <span class="n">reset_after_cex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Args:</span>
-<span class="sd">            alphabet: input alphabet</span>
-
-<span class="sd">            sul: system under learning</span>
-
-<span class="sd">            num_walks: number of walks to perform during search for cex</span>
-
-<span class="sd">            min_walk_len: minimum length of each walk</span>
-
-<span class="sd">            max_walk_len: maximum length of each walk</span>
-
-<span class="sd">            reset_after_cex: if True, num_walks will be preformed after every counter example, else the total number</span>
-<span class="sd">                or walks will equal to num_walks</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">alphabet</span><span class="p">,</span> <span class="n">sul</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span> <span class="o">=</span> <span class="n">num_walks</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">min_walk_len</span> <span class="o">=</span> <span class="n">min_walk_len</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span> <span class="o">=</span> <span class="n">max_walk_len</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span> <span class="o">=</span> <span class="n">reset_after_cex</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-
-    <span class="k">def</span> <span class="nf">find_cex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hypothesis</span><span class="p">):</span>
-
-        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span><span class="p">:</span>
-            <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">reset_hyp_and_sul</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">+=</span> <span class="mi">1</span>
-
-            <span class="n">num_steps</span> <span class="o">=</span> <span class="n">randint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_walk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span><span class="p">)</span>
-
-            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_steps</span><span class="p">):</span>
-                <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphabet</span><span class="p">))</span>
-
-                <span class="n">out_sul</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sul</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">num_steps</span> <span class="o">+=</span> <span class="mi">1</span>
-
-                <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_sul</span><span class="p">)</span>
-
-                <span class="k">if</span> <span class="n">out_hyp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">,</span> <span class="n">Onfsm</span><span class="p">):</span>
+                <span class="k">elif</span> <span class="n">out_hyp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;onfsm&#39;</span><span class="p">:</span>
                         <span class="k">return</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="c1"># hypothesis is MDP or SMM</span>
-                        <span class="n">cex</span> <span class="o">=</span> <span class="p">[</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">output</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">,</span> <span class="n">Mdp</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
-                        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
-                            <span class="n">cex</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">o</span><span class="p">])</span>
-                        <span class="k">return</span> <span class="n">cex</span>
-
-        <span class="k">return</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="nf">reset_counter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>This variation of random word equivalence oracle can be used when learning stochastic or non-deterministic systems.
-It uses step_to method of the hypothesis. With this method walk trough, the hypothesis is performed, based on the
-outputs of the SUL. If our hypothesis cannot step to the new state-based on random input and SULs output,
-a counterexample is returned.</p>
-</div>
-
-
-                            <div id="UnseenOutputRandomWordEqOracle.__init__" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#UnseenOutputRandomWordEqOracle.__init__">#&nbsp;&nbsp</a>
-
-        
-            <span class="name">UnseenOutputRandomWordEqOracle</span><span class="signature">(
-    self,
-    alphabet: list,
-    sul: <a href="../base/SUL.html#SUL">aalpy.base.SUL.SUL</a>,
-    num_walks=100,
-    min_walk_len=10,
-    max_walk_len=100,
-    reset_after_cex=True
-)</span>    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alphabet</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">num_walks</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">min_walk_len</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_walk_len</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                 <span class="n">reset_after_cex</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Args:</span>
-<span class="sd">            alphabet: input alphabet</span>
-
-<span class="sd">            sul: system under learning</span>
-
-<span class="sd">            num_walks: number of walks to perform during search for cex</span>
-
-<span class="sd">            min_walk_len: minimum length of each walk</span>
-
-<span class="sd">            max_walk_len: maximum length of each walk</span>
-
-<span class="sd">            reset_after_cex: if True, num_walks will be preformed after every counter example, else the total number</span>
-<span class="sd">                or walks will equal to num_walks</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">alphabet</span><span class="p">,</span> <span class="n">sul</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span> <span class="o">=</span> <span class="n">num_walks</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">min_walk_len</span> <span class="o">=</span> <span class="n">min_walk_len</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span> <span class="o">=</span> <span class="n">max_walk_len</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span> <span class="o">=</span> <span class="n">reset_after_cex</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-</pre></div>
-
-        </details>
-
-            <div class="docstring"><p>Args:
-    alphabet: input alphabet</p>
-
-<pre><code>sul: system under learning
-
-num_walks: number of walks to perform during search for cex
-
-min_walk_len: minimum length of each walk
-
-max_walk_len: maximum length of each walk
-
-reset_after_cex: if True, num_walks will be preformed after every counter example, else the total number
-    or walks will equal to num_walks
-</code></pre>
-</div>
-
-
-                            </div>
-                            <div id="UnseenOutputRandomWordEqOracle.find_cex" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#UnseenOutputRandomWordEqOracle.find_cex">#&nbsp;&nbsp</a>
-
-        
-            <span class="def">def</span>
-            <span class="name">find_cex</span><span class="signature">(self, hypothesis)</span>:
-    </div>
-
-                <details>
-            <summary>View Source</summary>
-            <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">find_cex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hypothesis</span><span class="p">):</span>
-
-        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_walks</span><span class="p">:</span>
-            <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">reset_hyp_and_sul</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">+=</span> <span class="mi">1</span>
-
-            <span class="n">num_steps</span> <span class="o">=</span> <span class="n">randint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_walk_len</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_walk_len</span><span class="p">)</span>
-
-            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_steps</span><span class="p">):</span>
-                <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alphabet</span><span class="p">))</span>
-
-                <span class="n">out_sul</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sul</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-                <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out_sul</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">num_steps</span> <span class="o">+=</span> <span class="mi">1</span>
-
-                <span class="n">out_hyp</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="o">.</span><span class="n">step_to</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">out_sul</span><span class="p">)</span>
-
-                <span class="k">if</span> <span class="n">out_hyp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reset_after_cex</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">num_walks_done</span> <span class="o">=</span> <span class="mi">0</span>
-
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">,</span> <span class="n">Onfsm</span><span class="p">):</span>
-                        <span class="k">return</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="c1"># hypothesis is MDP or SMM</span>
-                        <span class="n">cex</span> <span class="o">=</span> <span class="p">[</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">output</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">,</span> <span class="n">Mdp</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+                        <span class="n">cex</span> <span class="o">=</span> <span class="p">[</span><span class="n">hypothesis</span><span class="o">.</span><span class="n">initial_state</span><span class="o">.</span><span class="n">output</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">automata_type</span> <span class="o">==</span> <span class="s1">&#39;mdp&#39;</span> <span class="k">else</span> <span class="p">[]</span>
                         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">o</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
                             <span class="n">cex</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">o</span><span class="p">])</span>
                         <span class="k">return</span> <span class="n">cex</span>
@@ -619,8 +376,8 @@ current hypothesis.</p>
 
 
                             </div>
-                            <div id="UnseenOutputRandomWordEqOracle.reset_counter" class="classattr">
-                                        <div class="attr function"><a class="headerlink" href="#UnseenOutputRandomWordEqOracle.reset_counter">#&nbsp;&nbsp</a>
+                            <div id="RandomWordEqOracle.reset_counter" class="classattr">
+                                        <div class="attr function"><a class="headerlink" href="#RandomWordEqOracle.reset_counter">#&nbsp;&nbsp</a>
 
         
             <span class="def">def</span>
@@ -643,7 +400,7 @@ current hypothesis.</p>
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="../base/Oracle.html#Oracle">aalpy.base.Oracle.Oracle</a></dt>
-                                <dd id="UnseenOutputRandomWordEqOracle.reset_hyp_and_sul" class="function"><a href="../base/Oracle.html#Oracle.reset_hyp_and_sul">reset_hyp_and_sul</a></dd>
+                                <dd id="RandomWordEqOracle.reset_hyp_and_sul" class="function"><a href="../base/Oracle.html#Oracle.reset_hyp_and_sul">reset_hyp_and_sul</a></dd>
 
             </div>
                                 </dl>

@@ -53,13 +53,14 @@
 <span class="kn">from</span> <span class="nn">aalpy.base</span> <span class="kn">import</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">Oracle</span>
 <span class="kn">from</span> <span class="nn">aalpy.learning_algs.non_deterministic.AbstractedOnfsmObservationTable</span> <span class="kn">import</span> <span class="n">AbstractedNonDetObservationTable</span>
 <span class="kn">from</span> <span class="nn">aalpy.learning_algs.non_deterministic.TraceTree</span> <span class="kn">import</span> <span class="n">SULWrapper</span>
-<span class="kn">from</span> <span class="nn">aalpy.utils.HelperFunctions</span> <span class="kn">import</span> <span class="n">print_learning_info</span><span class="p">,</span> <span class="n">print_observation_table</span>
+<span class="kn">from</span> <span class="nn">aalpy.utils.HelperFunctions</span> <span class="kn">import</span> <span class="n">print_learning_info</span><span class="p">,</span> <span class="n">print_observation_table</span><span class="p">,</span> <span class="n">get_available_oracles_and_err_msg</span>
 
 <span class="n">print_options</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+<span class="n">available_oracles</span><span class="p">,</span> <span class="n">available_oracles_error_msg</span> <span class="o">=</span> <span class="n">get_available_oracles_and_err_msg</span><span class="p">()</span>
 
 
 <span class="k">def</span> <span class="nf">run_abstracted_ONFSM_Lstar</span><span class="p">(</span><span class="n">alphabet</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">eq_oracle</span><span class="p">:</span> <span class="n">Oracle</span><span class="p">,</span> <span class="n">abstraction_mapping</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">n_sampling</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                               <span class="n">max_learning_rounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+                               <span class="n">max_learning_rounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_oracle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Based on &#39;&#39;Learning Abstracted Non-deterministic Finite State Machines&#39;&#39; from Pferscher and Aichernig.</span>
 <span class="sd">    The algorithm learns an abstracted onfsm of a non-deterministic system. For the additional abstraction,</span>
@@ -84,6 +85,8 @@
 
 <span class="sd">        max_learning_rounds: if max_learning_rounds is reached, learning will stop (Default value = None)</span>
 
+<span class="sd">        custom_oracle: if True, warning about oracle type will be removed and custom oracle can be used</span>
+
 <span class="sd">        return_data: if True, map containing all information like number of queries... will be returned</span>
 <span class="sd">            (Default value = False)</span>
 
@@ -94,6 +97,9 @@
 <span class="sd">        learned abstracted ONFSM</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">custom_oracle</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">eq_oracle</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_oracles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">available_oracles_error_msg</span><span class="p">)</span>
+
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="n">eq_query_time</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">learning_rounds</span> <span class="o">=</span> <span class="mi">0</span>
@@ -209,6 +215,7 @@
     abstraction_mapping: dict,
     n_sampling=100,
     max_learning_rounds=None,
+    custom_oracle=False,
     return_data=False,
     print_level=2
 )</span>:
@@ -217,7 +224,7 @@
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">run_abstracted_ONFSM_Lstar</span><span class="p">(</span><span class="n">alphabet</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">eq_oracle</span><span class="p">:</span> <span class="n">Oracle</span><span class="p">,</span> <span class="n">abstraction_mapping</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">n_sampling</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                               <span class="n">max_learning_rounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+                               <span class="n">max_learning_rounds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_oracle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Based on &#39;&#39;Learning Abstracted Non-deterministic Finite State Machines&#39;&#39; from Pferscher and Aichernig.</span>
 <span class="sd">    The algorithm learns an abstracted onfsm of a non-deterministic system. For the additional abstraction,</span>
@@ -242,6 +249,8 @@
 
 <span class="sd">        max_learning_rounds: if max_learning_rounds is reached, learning will stop (Default value = None)</span>
 
+<span class="sd">        custom_oracle: if True, warning about oracle type will be removed and custom oracle can be used</span>
+
 <span class="sd">        return_data: if True, map containing all information like number of queries... will be returned</span>
 <span class="sd">            (Default value = False)</span>
 
@@ -252,6 +261,9 @@
 <span class="sd">        learned abstracted ONFSM</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">custom_oracle</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">eq_oracle</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_oracles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">available_oracles_error_msg</span><span class="p">)</span>
+
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
     <span class="n">eq_query_time</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">learning_rounds</span> <span class="o">=</span> <span class="mi">0</span>
@@ -376,6 +388,8 @@ n_sampling: number of times that membership/input queries will be asked for each
     (Default value = 100)
 
 max_learning_rounds: if max_learning_rounds is reached, learning will stop (Default value = None)
+
+custom_oracle: if True, warning about oracle type will be removed and custom oracle can be used
 
 return_data: if True, map containing all information like number of queries... will be returned
     (Default value = False)

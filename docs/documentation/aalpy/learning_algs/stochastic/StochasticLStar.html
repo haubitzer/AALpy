@@ -56,7 +56,9 @@
 <span class="kn">from</span> <span class="nn">aalpy.learning_algs.stochastic.SamplingBasedObservationTable</span> <span class="kn">import</span> <span class="n">SamplingBasedObservationTable</span>
 <span class="kn">from</span> <span class="nn">aalpy.learning_algs.stochastic.StochasticCexProcessing</span> <span class="kn">import</span> <span class="n">stochastic_longest_prefix</span><span class="p">,</span> <span class="n">stochastic_rs</span>
 <span class="kn">from</span> <span class="nn">aalpy.learning_algs.stochastic.StochasticTeacher</span> <span class="kn">import</span> <span class="n">StochasticTeacher</span>
-<span class="kn">from</span> <span class="nn">aalpy.utils.HelperFunctions</span> <span class="kn">import</span> <span class="n">print_learning_info</span><span class="p">,</span> <span class="n">print_observation_table</span><span class="p">,</span> <span class="n">get_cex_prefixes</span>
+<span class="kn">from</span> <span class="nn">aalpy.utils.HelperFunctions</span> <span class="kn">import</span> <span class="n">print_learning_info</span><span class="p">,</span> <span class="n">print_observation_table</span><span class="p">,</span> <span class="n">get_cex_prefixes</span><span class="p">,</span> \
+    <span class="n">get_available_oracles_and_err_msg</span>
+
 <span class="kn">from</span> <span class="nn">aalpy.utils.ModelChecking</span> <span class="kn">import</span> <span class="n">stop_based_on_confidence</span>
 
 <span class="n">strategies</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;classic&#39;</span><span class="p">,</span> <span class="s1">&#39;normal&#39;</span><span class="p">,</span> <span class="s1">&#39;chi2&#39;</span><span class="p">]</span>
@@ -66,12 +68,13 @@
 <span class="n">diff_checker_options</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;classic&#39;</span><span class="p">:</span> <span class="n">HoeffdingChecker</span><span class="p">(),</span>
                         <span class="s1">&#39;chi2&#39;</span><span class="p">:</span> <span class="n">ChiSquareChecker</span><span class="p">(),</span>
                         <span class="s1">&#39;normal&#39;</span><span class="p">:</span> <span class="n">AdvancedHoeffdingChecker</span><span class="p">()}</span>
+<span class="n">available_oracles</span><span class="p">,</span> <span class="n">available_oracles_error_msg</span> <span class="o">=</span> <span class="n">get_available_oracles_and_err_msg</span><span class="p">()</span>
 
 
 <span class="k">def</span> <span class="nf">run_stochastic_Lstar</span><span class="p">(</span><span class="n">input_alphabet</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">eq_oracle</span><span class="p">:</span> <span class="n">Oracle</span><span class="p">,</span> <span class="n">n_c</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">n_resample</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">target_unambiguity</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
                          <span class="n">min_rounds</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_rounds</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">automaton_type</span><span class="o">=</span><span class="s1">&#39;mdp&#39;</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">&#39;normal&#39;</span><span class="p">,</span>
-                         <span class="n">cex_processing</span><span class="o">=</span><span class="s1">&#39;longest_prefix&#39;</span><span class="p">,</span> <span class="n">samples_cex_strategy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                         <span class="n">property_based_stopping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+                         <span class="n">cex_processing</span><span class="o">=</span><span class="s1">&#39;longest_prefix&#39;</span><span class="p">,</span> <span class="n">samples_cex_strategy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_oracle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">property_based_stopping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Learning of Markov Decision Processes based on &#39;L*-Based Learning of Markov Decision Processes&#39; by Tappler et al.</span>
 
@@ -107,6 +110,8 @@
 <span class="sd">        property_based_stopping: A tuple containing (path to the properties file, correct values of each property,</span>
 <span class="sd">            allowed error for each property. Recommended one is 0.02 (2%)).</span>
 
+<span class="sd">        custom_oracle: if True, warning about oracle type will be removed and custom oracle can be used</span>
+
 <span class="sd">        return_data: if True, map containing all information like number of queries... will be returned</span>
 <span class="sd">            (Default value = False)</span>
 
@@ -129,6 +134,9 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">strategy</span><span class="p">,</span> <span class="n">DifferenceChecker</span><span class="p">)</span>
         <span class="n">compatibility_checker</span> <span class="o">=</span> <span class="n">strategy</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">custom_oracle</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">eq_oracle</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_oracles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">available_oracles_error_msg</span><span class="p">)</span>
 
     <span class="n">stochastic_teacher</span> <span class="o">=</span> <span class="n">StochasticTeacher</span><span class="p">(</span><span class="n">sul</span><span class="p">,</span> <span class="n">n_c</span><span class="p">,</span> <span class="n">eq_oracle</span><span class="p">,</span> <span class="n">automaton_type</span><span class="p">,</span> <span class="n">compatibility_checker</span><span class="p">,</span>
                                            <span class="n">samples_cex_strategy</span><span class="o">=</span><span class="n">samples_cex_strategy</span><span class="p">)</span>
@@ -264,6 +272,7 @@
     strategy=&#39;normal&#39;,
     cex_processing=&#39;longest_prefix&#39;,
     samples_cex_strategy=None,
+    custom_oracle=False,
     return_data=False,
     property_based_stopping=None,
     print_level=2
@@ -274,8 +283,8 @@
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">run_stochastic_Lstar</span><span class="p">(</span><span class="n">input_alphabet</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">,</span> <span class="n">eq_oracle</span><span class="p">:</span> <span class="n">Oracle</span><span class="p">,</span> <span class="n">n_c</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">n_resample</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">target_unambiguity</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
                          <span class="n">min_rounds</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_rounds</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">automaton_type</span><span class="o">=</span><span class="s1">&#39;mdp&#39;</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">&#39;normal&#39;</span><span class="p">,</span>
-                         <span class="n">cex_processing</span><span class="o">=</span><span class="s1">&#39;longest_prefix&#39;</span><span class="p">,</span> <span class="n">samples_cex_strategy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                         <span class="n">property_based_stopping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+                         <span class="n">cex_processing</span><span class="o">=</span><span class="s1">&#39;longest_prefix&#39;</span><span class="p">,</span> <span class="n">samples_cex_strategy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">custom_oracle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">return_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">property_based_stopping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">print_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Learning of Markov Decision Processes based on &#39;L*-Based Learning of Markov Decision Processes&#39; by Tappler et al.</span>
 
@@ -311,6 +320,8 @@
 <span class="sd">        property_based_stopping: A tuple containing (path to the properties file, correct values of each property,</span>
 <span class="sd">            allowed error for each property. Recommended one is 0.02 (2%)).</span>
 
+<span class="sd">        custom_oracle: if True, warning about oracle type will be removed and custom oracle can be used</span>
+
 <span class="sd">        return_data: if True, map containing all information like number of queries... will be returned</span>
 <span class="sd">            (Default value = False)</span>
 
@@ -333,6 +344,9 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">strategy</span><span class="p">,</span> <span class="n">DifferenceChecker</span><span class="p">)</span>
         <span class="n">compatibility_checker</span> <span class="o">=</span> <span class="n">strategy</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">custom_oracle</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">eq_oracle</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_oracles</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="n">available_oracles_error_msg</span><span class="p">)</span>
 
     <span class="n">stochastic_teacher</span> <span class="o">=</span> <span class="n">StochasticTeacher</span><span class="p">(</span><span class="n">sul</span><span class="p">,</span> <span class="n">n_c</span><span class="p">,</span> <span class="n">eq_oracle</span><span class="p">,</span> <span class="n">automaton_type</span><span class="p">,</span> <span class="n">compatibility_checker</span><span class="p">,</span>
                                            <span class="n">samples_cex_strategy</span><span class="o">=</span><span class="n">samples_cex_strategy</span><span class="p">)</span>
@@ -482,6 +496,8 @@ samples_cex_strategy: strategy for finding counterexamples in the trace tree. No
 
 property_based_stopping: A tuple containing (path to the properties file, correct values of each property,
     allowed error for each property. Recommended one is 0.02 (2%)).
+
+custom_oracle: if True, warning about oracle type will be removed and custom oracle can be used
 
 return_data: if True, map containing all information like number of queries... will be returned
     (Default value = False)

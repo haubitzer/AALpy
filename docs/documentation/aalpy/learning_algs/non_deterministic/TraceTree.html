@@ -99,7 +99,9 @@
 
 
 <span class="k">class</span> <span class="nc">SULWrapper</span><span class="p">(</span><span class="n">SUL</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for non-deterministic SUL. After every step, input/output pair is added to the tree containing all traces.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sul</span> <span class="o">=</span> <span class="n">sul</span>
@@ -175,6 +177,12 @@
 
     <span class="k">def</span> <span class="nf">get_all_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It should basically do this.</span>
+<span class="sd">        Get to the node that you reach when following input and outputs.</span>
+<span class="sd">        Than, from that node on, with input values in e, record ALL possible paths that follow it.</span>
+<span class="sd">        Edi 2 Konstantin:</span>
+<span class="sd">            In case of any questions about this, let me know.</span>
+
 
 <span class="sd">        Args:</span>
 <span class="sd">          inputs: </span>
@@ -192,9 +200,12 @@
                 <span class="k">return</span> <span class="kc">None</span>
             <span class="n">curr_node</span> <span class="o">=</span> <span class="n">node</span>
 
+
         <span class="c1"># from this point all record all possible outputs</span>
         <span class="n">nodes_to_process</span> <span class="o">=</span> <span class="p">[</span><span class="n">curr_node</span><span class="p">]</span>
         <span class="c1"># TODO RETURN WHOLE TRACES NOT JUST SINGLE OUTPUTS</span>
+        <span class="c1"># below this line it is faulty (but general idea is there, it is just wrong)</span>
+        <span class="c1"># also you can change stuff above it</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="p">:</span>
                 <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_to_process</span> <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
@@ -221,7 +232,9 @@
                 <details>
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">SULWrapper</span><span class="p">(</span><span class="n">SUL</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; &quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for non-deterministic SUL. After every step, input/output pair is added to the tree containing all traces.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sul</span><span class="p">:</span> <span class="n">SUL</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sul</span> <span class="o">=</span> <span class="n">sul</span>
@@ -252,7 +265,9 @@
 
         </details>
 
-    
+            <div class="docstring"><p>Wrapper for non-deterministic SUL. After every step, input/output pair is added to the tree containing all traces.</p>
+</div>
+
 
                             <div id="SULWrapper.__init__" class="classattr">
                                         <div class="attr function"><a class="headerlink" href="#SULWrapper.__init__">#&nbsp;&nbsp</a>
@@ -484,6 +499,12 @@
 
     <span class="k">def</span> <span class="nf">get_all_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It should basically do this.</span>
+<span class="sd">        Get to the node that you reach when following input and outputs.</span>
+<span class="sd">        Than, from that node on, with input values in e, record ALL possible paths that follow it.</span>
+<span class="sd">        Edi 2 Konstantin:</span>
+<span class="sd">            In case of any questions about this, let me know.</span>
+
 
 <span class="sd">        Args:</span>
 <span class="sd">          inputs: </span>
@@ -501,9 +522,12 @@
                 <span class="k">return</span> <span class="kc">None</span>
             <span class="n">curr_node</span> <span class="o">=</span> <span class="n">node</span>
 
+
         <span class="c1"># from this point all record all possible outputs</span>
         <span class="n">nodes_to_process</span> <span class="o">=</span> <span class="p">[</span><span class="n">curr_node</span><span class="p">]</span>
         <span class="c1"># TODO RETURN WHOLE TRACES NOT JUST SINGLE OUTPUTS</span>
+        <span class="c1"># below this line it is faulty (but general idea is there, it is just wrong)</span>
+        <span class="c1"># also you can change stuff above it</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="p">:</span>
                 <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_to_process</span> <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
@@ -607,6 +631,12 @@
             <summary>View Source</summary>
             <div class="codehilite"><pre><span></span>    <span class="k">def</span> <span class="nf">get_all_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It should basically do this.</span>
+<span class="sd">        Get to the node that you reach when following input and outputs.</span>
+<span class="sd">        Than, from that node on, with input values in e, record ALL possible paths that follow it.</span>
+<span class="sd">        Edi 2 Konstantin:</span>
+<span class="sd">            In case of any questions about this, let me know.</span>
+
 
 <span class="sd">        Args:</span>
 <span class="sd">          inputs: </span>
@@ -624,9 +654,12 @@
                 <span class="k">return</span> <span class="kc">None</span>
             <span class="n">curr_node</span> <span class="o">=</span> <span class="n">node</span>
 
+
         <span class="c1"># from this point all record all possible outputs</span>
         <span class="n">nodes_to_process</span> <span class="o">=</span> <span class="p">[</span><span class="n">curr_node</span><span class="p">]</span>
         <span class="c1"># TODO RETURN WHOLE TRACES NOT JUST SINGLE OUTPUTS</span>
+        <span class="c1"># below this line it is faulty (but general idea is there, it is just wrong)</span>
+        <span class="c1"># also you can change stuff above it</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="p">:</span>
                 <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">output</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_to_process</span> <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
@@ -640,7 +673,13 @@
 
         </details>
 
-            <div class="docstring"><p>Args:
+            <div class="docstring"><p>It should basically do this.
+Get to the node that you reach when following input and outputs.
+Than, from that node on, with input values in e, record ALL possible paths that follow it.
+Edi 2 Konstantin:
+    In case of any questions about this, let me know.</p>
+
+<p>Args:
   inputs: 
   outputs: 
   e: </p>
