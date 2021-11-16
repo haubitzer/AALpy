@@ -68,10 +68,6 @@ def run_approximated_Iolts_Lstar(
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
-        # TODO merge quiescence states
-        # The h_plus automata may has two state that are connected via an quiescence transition if that is the case we
-        # should merge this two states together, this would improve the readability of the automata.
-
         # TODO check merged states aka. rows for completeness
         # As discussed, there could be the case that a state doesn't lead to the chaos state even if it should,
         # the reason for that is that state is enabled by two different traces but only one is in the observation table represented,
