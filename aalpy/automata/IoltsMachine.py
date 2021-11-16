@@ -63,18 +63,21 @@ class IoltsState(AutomatonState):
 
         return result
 
-    def get_quiescence(self) -> list[tuple[str, IoltsState]]:
-        if self.quiescence is not None:
-            return [
+    def get_quiescence(self, destination: IoltsState = None) -> list[tuple[str, IoltsState]]:
+
+        result = [
                 (quiescence, state)
                 for quiescence, states in self.quiescence.items()
                 for state in states
             ]
 
-        if self.is_quiescence():
-            return [("quiescence", self)]
+        result = (
+            result
+            if destination is None
+            else list(filter(lambda elm: elm[1] == destination, result))
+        )
 
-        return []
+        return result
 
     def add_input(self, input: string, new_state: IoltsState):
         assert input.startswith("?")
@@ -102,8 +105,6 @@ class IoltsState(AutomatonState):
         self.transitions.pop("quiescence", None)
 
     def add_quiescence(self, new_state: IoltsState = None):
-        # assert not bool(self.outputs)
-
         if new_state is None:
             new_state = self
 
@@ -129,10 +130,12 @@ class IoltsState(AutomatonState):
         self.outputs.update({output: tuple(new_value)})
         self.transitions.update(self.outputs)
 
-    def make_input_complete(self, alphabet: list):
-        for letter in alphabet:
-            if not self.get_inputs(letter):
-                self.add_input(letter, self)
+    def remove_quiescence(self, new_state):
+        new_value = list(self.quiescence["quiescence"])
+        if new_state in new_value:
+            new_value.remove(new_state)
+        self.quiescence.update({"quiescence": tuple(new_value)})
+        self.transitions.update(self.quiescence)
 
     def is_input_enabled(self) -> bool:
         """
@@ -211,7 +214,7 @@ class IoltsMachine(Automaton):
     def random_unroll_step(self) -> tuple[list[str], list[IoltsState]]:
         """
         This step function make a self loop transition if possible and a random transition to a different state.
-        Quiescence does not count as transition. Non-det may lead to an execption.
+        Quiescence does not count as transition. Non-det may lead to an exception.
 
         If no transition are possible the function return two empty lists.
         """
@@ -357,17 +360,37 @@ class IoltsMachine(Automaton):
 
         """
         alphabet = set(self.get_input_alphabet())
-        for state in self.states:
-            if state.inputs.keys() != alphabet:
-                return False
-        return True
+        return all(state.inputs.keys() == alphabet for state in self.states)
 
     def make_input_complete(self):
-        alphabet = self.get_input_alphabet()
-        for state in self.states:
-            state.make_input_complete(alphabet)
+        """
+        Adds self-loops for missing input transition to make the automata input complete.
+        This process is also called Angelic completion.
+        """
+        for state, letter in itertools.product(self.states, self.get_input_alphabet()):
+            if not state.get_inputs(letter):
+                state.add_input(letter, state)
 
-    def remove_self_loops_for_non_quiescence_states(self):
+    def remove_self_loops_from_non_quiescence_states(self):
         for state, letter in itertools.product(self.states, self.get_input_alphabet()):
             if not state.is_quiescence():
                 state.remove_input(letter, state)
+
+    def merge_into(self, target, source):
+        state: IoltsState
+        for state, letter in itertools.product(self.states, self.get_input_alphabet()):
+            if state.get_inputs(letter, source):
+                state.remove_input(letter, source)
+                state.add_input(letter, target)
+
+        for state, letter in itertools.product(self.states, self.get_output_alphabet()):
+            if state.get_outputs(letter, source):
+                state.remove_output(letter, source)
+                state.add_output(letter, target)
+
+        for state in self.states:
+            if state.get_quiescence(source):
+                state.remove_quiescence(source)
+                state.add_quiescence(target)
+
+        self.states.remove(source)

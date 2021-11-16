@@ -131,8 +131,8 @@ class ModelCheckerPrecisionOracle:
         # Safety properties needs to hold for upper hypothesis, but are they also valid for the lower hypothesis.
         # However, we think that, it doesn't make sense to check liveness on the upper H, because the chaos state is always live.
 
-        h_minus.remove_self_loops_for_non_quiescence_states()
-        h_plus.remove_self_loops_for_non_quiescence_states()
+        h_minus.remove_self_loops_from_non_quiescence_states()
+        h_plus.remove_self_loops_from_non_quiescence_states()
 
         is_safe, cex, safety_property = self.model_checker.check_safety_properties(h_plus)
         if not is_safe:

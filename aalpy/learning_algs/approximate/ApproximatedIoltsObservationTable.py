@@ -333,6 +333,13 @@ class ApproximatedIoltsObservationTable:
             initial_state,
             list(states_dict.values()) + [chaos_quiescence_state, chaos_state],
         )
+
+        # Merges states together which are connected via quiescence transition
+        for state in automaton.states:
+            for _, destination in state.get_quiescence():
+                if state != destination and state != chaos_state:
+                    automaton.merge_into(state, destination)
+
         automaton.characterization_set = self.E
 
         return automaton

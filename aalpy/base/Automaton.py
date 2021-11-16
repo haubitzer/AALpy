@@ -24,6 +24,9 @@ class AutomatonState(ABC):
         """
         transitions = []
         for trans, state in self.transitions.items():
+            if type(state) is not type(self):
+                raise Exception("Could not safely compare states because of mismatching types")
+
             if state != self:
                 transitions.append(trans)
         return transitions
