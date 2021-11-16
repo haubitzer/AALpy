@@ -78,6 +78,9 @@ def run_approximated_Iolts_Lstar(
         # The other is not. However, the not-represented trace is never checked for completeness.
         # We should somehow check if a state is enabled by traces not in the observation table and check this traces for completeness.
 
+        # Idea, if a state has two transition with different letters to the same state, we should check the trace + the different + letter + n post fix,
+        # against the SUL or the completeness query
+
         # Find counter example with precision oracle
         cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
