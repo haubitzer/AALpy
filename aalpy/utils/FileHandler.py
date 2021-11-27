@@ -6,7 +6,8 @@ import traceback
 from pydot import Dot, Node, Edge, graph_from_dot_file
 
 from aalpy.automata import Dfa, MooreMachine, Mdp, Onfsm, MealyState, DfaState, MooreState, MealyMachine, \
-    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, MarkovChain, McState,  IoltsState, IoltsMachine
+    MdpState, StochasticMealyMachine, StochasticMealyState, OnfsmState, MarkovChain, McState, IoltsState, IoltsMachine, \
+    QUIESCENCE
 
 file_types = ['dot', 'png', 'svg', 'pdf', 'string']
 
@@ -288,7 +289,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                     source.add_input(label, destination)
                 elif label.startswith('!'):
                     source.add_output(label, destination)
-                elif label == 'quiescence':
+                elif label == QUIESCENCE:
                     pass
                 else:
                     raise Exception("Unknown Prefix: " + str(label))

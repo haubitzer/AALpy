@@ -1,0 +1,12 @@
+<true* . in_close . out_alarmArmed_ON> true
+
+% After that sequence (out_acousticAlarm_OFF, out_opticalAlarm_OFF) there is at least one trace like (close, AlarmArmed_ON)
+
+
+
+% [true* . out_alarmArmed_ON .in_open]< !in_unlock*. out_acousticAlarm_OFF. out_opticalAlarm_OFF> <!in_close . out_alarmArmed_ON> false
+
+
+
+
+% [true* . out_wait_270]<true . true.  in_close . out_alarmArmed_ON> true

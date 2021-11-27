@@ -4,7 +4,7 @@ from pathlib import Path
 from random import choices
 
 from aalpy.SULs import IoltsMachineSUL
-from aalpy.automata import IoltsMachine, IoltsState
+from aalpy.automata import IoltsMachine, IoltsState, QUIESCENCE
 from aalpy.utils import load_automaton_from_file
 
 
@@ -59,7 +59,7 @@ class Mcrl2Converter:
     def _act(self) -> str:
         # Note add a convert function to the get_alphabet function
         safe_input = list(map(lambda input: input.replace('?', 'in_'), self.sul.iolts.get_input_alphabet()))
-        safe_output = list(map(lambda output: output.replace('!', 'out_'), self.sul.iolts.get_output_alphabet())) + ['quiescence']
+        safe_output = list(map(lambda output: output.replace('!', 'out_'), self.sul.iolts.get_output_alphabet())) + [QUIESCENCE]
 
         return f"act{os.linesep}{', '.join(safe_input)},{os.linesep}{', '.join(safe_output )};{os.linesep}"
 
@@ -97,10 +97,12 @@ class Mcrl2Interface:
         name = Path(property).stem
         folder = "tmp/"
 
+        # print(self.model_as_mcrl2)
+
         make_new_folder = f"mkdir -p {folder} && rm -r {folder} && mkdir {folder}"
         convert_to_lps = f"echo \"{self.model_as_mcrl2}\" | mcrl22lps > {folder}{name}.lps"
-        convert_to_pbes = f"lps2pbes -m -c --formula={property} {folder}{name}.lps {folder}{name}.pbes"
-        solve_pbes = f"pbessolve --search-strategy=depth-first --solve-strategy=3 --file={folder}{name}.lps {folder}{name}.pbes"
+        convert_to_pbes = f"lps2pbes -m -s -c --formula={property} {folder}{name}.lps {folder}{name}.pbes"
+        solve_pbes = f"pbessolve --search-strategy=breadth-first --solve-strategy=1 --file={folder}{name}.lps {folder}{name}.pbes"
         cex_to_lts = f"lps2lts {folder}{name}.pbes.evidence.lps {folder}{name}.pbes.evidence.lts"
         lts_to_dot = f"ltsconvert {folder}{name}.pbes.evidence.lts {folder}{name}.pbes.evidence.dot"
         replace_in = f"sed -i 's/in_/?/g' {folder}{name}.pbes.evidence.dot"
@@ -116,29 +118,30 @@ class Mcrl2Interface:
         output = os.popen(
             f"{make_new_folder} && {convert_to_lps} && {convert_to_pbes} && {solve_pbes} && {cex_to_lts} && {lts_to_dot} && {replace_in} && {replace_out} && {add_start0} && {remove_empty_label} && {remove_old_start_node}").read().rstrip()
 
-        print(output)
-
         if output == "true":
             return True, None
         else:
             print(property)
-            return False, self.getCounterexample(f"{folder}{name}.pbes.evidence.dot")
+            return False, self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
 
-    def getCounterexample(self, path: str) -> tuple[str]:
+    def get_counter_example(self, path: str) -> tuple[str]:
         trace = list()
         visited = set()
         automaton: IoltsMachine = load_automaton_from_file(path, "iolts")
-
         print(automaton)
 
         while True:
+            visited.add(automaton.initial_state)
+
             letters, states = automaton.random_unroll_step()
 
             if letters:
                 trace.extend(letters)
+            else:
+                return trace
 
-            for state in states:
-                visited.add(state)
-
-            if not letters or visited == set(automaton.states):
+            if visited != set(automaton.states):
+                for state in states:
+                    visited.add(state)
+            else:
                 return trace

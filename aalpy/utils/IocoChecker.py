@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from aalpy.automata import IoltsMachine, IoltsState
+from aalpy.automata import IoltsMachine, IoltsState, QUIESCENCE
 
 
 class IocoChecker:
@@ -113,7 +113,7 @@ class IocoChecker:
             test_state.add_input(letter.replace("!", "?"), self._new_failed_state())
         else:
             if any(state.is_quiescence() for state in destinations):
-                test_state.add_input("?quiescence", self._new_failed_state())
+                test_state.add_input(f"?{QUIESCENCE}", self._new_failed_state())
                 test_state.add_input(letter.replace("!", "?"), self._new_passed_state())
             else:
                 new_test_state = self._new_node_state()
@@ -136,10 +136,10 @@ class IocoChecker:
                 and state.is_input_enabled_for_diff_state()
                 and state not in self.visited
             ):
-                test_state.add_input("?quiescence", new_test_state)
+                test_state.add_input(f"?{QUIESCENCE}", new_test_state)
                 follow_state.update({new_test_state: destinations})
             elif state.is_quiescence():
-                test_state.add_input("?quiescence", self._new_passed_state())
+                test_state.add_input(f"?{QUIESCENCE}", self._new_passed_state())
 
         return follow_state
 
@@ -288,8 +288,8 @@ class IocoChecker:
             if ioco_violation:
                 cex = []
                 for letter in shortest_path:
-                    if letter == "?quiescence":
-                        cex.append("QUIESCENCE")
+                    if letter == f"?{QUIESCENCE}":
+                        cex.append(QUIESCENCE)
                     elif letter.startswith("?"):
                         cex.append(letter.replace("?", "!"))
                     elif letter.startswith("!"):
@@ -314,8 +314,8 @@ class IocoChecker:
             letter = path.pop(0)
             destination: IoltsState = sut.get_state_by_id(destination_id)
 
-            if letter == "?quiescence":
-                sut.step_to("quiescence", destination)
+            if letter == f"?{QUIESCENCE}":
+                sut.step_to(QUIESCENCE, destination)
             elif letter.startswith("?"):
                 sut.step_to(letter.replace("?", "!"), destination)
             elif letter.startswith("!"):
@@ -330,7 +330,7 @@ class IocoChecker:
         current_state_id = sut.current_state.state_id
         possible_destinations = []
 
-        if next_letter == "?quiescence":
+        if next_letter == f"?{QUIESCENCE}":
             possible_destinations = sut.current_state.get_quiescence()
         elif next_letter.startswith("?"):
             possible_destinations = sut.current_state.get_outputs(
@@ -388,7 +388,7 @@ class IocoChecker:
             destination: IoltsState = sut.get_state_by_id(destination_id)
 
             is_input = letter.startswith("!")
-            is_quiescence = letter == "?quiescence"
+            is_quiescence = letter == f"?{QUIESCENCE}"
             is_output = letter.startswith("?") and not is_quiescence
 
             accepted_input = is_input and bool(

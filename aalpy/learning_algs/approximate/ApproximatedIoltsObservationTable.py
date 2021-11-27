@@ -1,11 +1,10 @@
 import itertools
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from aalpy.SULs import IoltsMachineSUL
-from aalpy.automata import IoltsState, IoltsMachine
+from aalpy.automata import IoltsState, IoltsMachine, QUIESCENCE
 
 EMPTY_WORD = tuple()
-QUIESCENCE = "QUIESCENCE"
 QUIESCENCE_TUPLE = tuple([QUIESCENCE])
 
 
@@ -73,14 +72,18 @@ class ApproximatedIoltsObservationTable:
 
     def row(self, s):
         # assert self.row_is_defined(s)
-        return self.T[s]
+        result = defaultdict(frozenset)
+        for (key, t) in self.T[s].items():
+            result[key] = frozenset(t)
+
+        return result
 
     def row_plus(self, s):
         # assert self.row_is_defined(s)
 
         result = defaultdict(tuple)
         for (key, t), (_, c) in zip(self.T[s].items(), self.T_completed[s].items()):
-            result[key] = (t, c)
+            result[key] = (frozenset(t), c)
 
         return result
 
@@ -231,6 +234,12 @@ class ApproximatedIoltsObservationTable:
         for s, e in itertools.product(update_S, update_E):
             self.T[s].update(dict(sorted(self.T[s].items())))
 
+    def get_row_key(self, s) -> tuple:
+        return tuple(self.row(s).items())
+
+    def get_row_plus_key(self, s) -> tuple:
+        return tuple(self.row_plus(s).items())
+
     def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
@@ -243,26 +252,25 @@ class ApproximatedIoltsObservationTable:
         for stateCounter, s in enumerate(self.S):
             state = IoltsState(f"s{stateCounter}")
             state.prefix = s
-            row = self.row(s)
 
             states_dict[s] = state
-            state_distinguish[str(row)] = state
+            state_distinguish[self.get_row_key(s)] = state
 
             if s == EMPTY_WORD:
                 initial_state = state
+
 
         # add transitions based on extended S set
         for s in self.S:
             state = states_dict[s]
             for i in self.A_input:
-                row = self.row(s + i)
-                if str(row) in state_distinguish:
-                    state.add_input(i[0], state_distinguish.get(str(row)))
+                row = self.get_row_key(s + i)
+                if row in state_distinguish:
+                    state.add_input(i[0], state_distinguish.get(row))
 
             for o in self.row(s)[EMPTY_WORD]:
                 if o is not QUIESCENCE:
-                    row = self.row(s + tuple([o]))
-                    destination_state = state_distinguish[str(row)]
+                    destination_state = state_distinguish[self.get_row_key(s + tuple([o]))]
                     state.add_output(o, destination_state)
 
         automaton = IoltsMachine(
@@ -293,10 +301,8 @@ class ApproximatedIoltsObservationTable:
         for stateCounter, s in enumerate(self.S):
             state = IoltsState(f"s{stateCounter}")
             state.prefix = s
-            row = self.row_plus(s)
-
             states_dict[s] = state
-            state_distinguish[str(row)] = state
+            state_distinguish[self.get_row_plus_key(s)] = state
 
             if s == EMPTY_WORD:
                 initial_state = state
@@ -305,24 +311,19 @@ class ApproximatedIoltsObservationTable:
         for s in self.S:
             state = states_dict[s]
             for i in self.A_input:
-                row = self.row_plus(s + i)
-                if str(row) in state_distinguish:
-                    state.add_input(i[0], state_distinguish.get(str(row)))
+                row = self.get_row_plus_key(s + i)
+                if row in state_distinguish:
+                    state.add_input(i[0], state_distinguish.get(row))
 
             for output_tuple in self.A_output + [QUIESCENCE_TUPLE]:
                 output = output_tuple[0]
 
                 if output in self.row(s)[EMPTY_WORD]:
-                    row = self.row_plus(s + output_tuple)
-
-                    # TODO row may not be valid
-                    # For some unknown reason the row is not valid here, and could not be used as a key in distinguish.
-                    # The cause it not known and a fix is also not known.
-
+                    row = self.get_row_plus_key(s + output_tuple)
                     if output_tuple == QUIESCENCE_TUPLE:
-                        state.add_quiescence(state_distinguish.get(str(row)))
+                        state.add_quiescence(state_distinguish.get(row))
                     else:
-                        state.add_output(output, state_distinguish.get(str(row)))
+                        state.add_output(output, state_distinguish.get(row))
                 elif not self.row_plus(s)[EMPTY_WORD][1]:
                     if output_tuple == QUIESCENCE_TUPLE:
                         state.add_quiescence(chaos_quiescence_state)
