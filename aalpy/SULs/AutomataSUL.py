@@ -1,3 +1,5 @@
+from collections import Counter
+from random import choice
 from typing import Optional
 
 from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IoltsMachine, \
@@ -174,12 +176,17 @@ class StochasticMealySUL(SUL):
 
 
 class IoltsMachineSUL(SUL):
-    def __init__(self, iolts: IoltsMachine):
+    def __init__(self, iolts: IoltsMachine, query_certainty_probability: float = 0.8, completeness_certainty_probability: float = 0.8):
         super().__init__()
         self.iolts = iolts
+        self.query_certainty_probability = query_certainty_probability
+        self.completeness_certainty_probability = completeness_certainty_probability
+
         self.cache = dict()
+        self.num_listens = 0
         self.num_completeness_queries = 0
         self.num_completeness_steps = 0
+        self.num_completeness_listens = 0
 
     def pre(self):
         self.num_queries += 1
@@ -192,82 +199,101 @@ class IoltsMachineSUL(SUL):
         self.num_steps += 1
         return self.iolts.step(letter)
 
-    # TODO remove step_to function or make it opt_in
-    def step_to(self, letter):
-        self.num_steps += 1
-        return self.iolts.step_to(letter)
+    def listen(self):
+        self.num_listens += 1
+        return self.iolts.listen()
 
     def query(self, word: tuple, with_cache: bool = True) -> Optional[str]:
-        # TODO cache needs to store more than one output.
-        in_cache, output = self._cache_lookup(word)
+        in_cache, counter = self._cache_lookup(word)
         if in_cache and with_cache:
-            return output
+            self.num_cached_queries += 1
+            return choice(list(counter.elements()))
 
-        iterations = self._approximated_iterations(word)
-        output = self._query_with_step_to(word, iterations)
-        self.cache.update({word: output})
+        output = self._query_with_step(word)
+        self._cache_update(word, output)
 
         return output
 
-    def _cache_lookup(self, word) -> tuple[bool, Optional[str]]:
+    def _cache_update(self, word, output):
+        if word not in self.cache.keys():
+            self.cache.update({word: Counter()})
+
+        self.cache.get(word).update([output])
+
+    def _cache_lookup(self, word) -> tuple[bool, Optional[Counter]]:
         from aalpy.utils.HelperFunctions import all_prefixes
 
+        is_unreachable = False
         for prefix in all_prefixes(word):
-            if prefix in self.cache.keys() and self.cache[prefix] is None:
-                return True, None
+            if prefix in self.cache.keys():
+                is_unreachable = all(k is None for k in self.cache[prefix].keys())
+
+            if is_unreachable:
+                self._cache_update(prefix, None)
 
         if word in self.cache.keys():
             return True, self.cache[word]
 
         return False, None
 
-    def _approximated_iterations(self, word) -> int:
-        # TODO find good retry rate
-        # First check how long the prefix is that is not in the cache,
-        # For each step in the prefix we assume that there is an "no rare event" rate maybe something like (1/num_outputs)
-        # we probability that the prefix happen is len(suffix) * rate.
-        # The prefix is possible and we know that. We need to take that into account but not sure how yet,
-        # because the same trace could lead to different states.
+    def _query_with_step(self, word) -> Optional[str]:
+        is_certain = False
+        output = None
 
-        # However, if the suffix is longer than 1 and the first step was successful we need to recalculate the iterations.
+        while not is_certain:
+            self.pre()
+            prefix, suffix = self.split_word(word)
 
+            if not self._step_trace(prefix, tuple()):
+                continue
+
+            if not self._step_trace(suffix, prefix):
+                is_certain = self.calculate_all_seen_probability(prefix) > self.query_certainty_probability
+                continue
+
+            output = self.listen()
+            break
+
+        self.post()
+        return output
+
+    def split_word(self, word):
         from aalpy.utils.HelperFunctions import all_prefixes
 
-        len_prefix = len(word)
-        for i, prefix in enumerate(all_prefixes(word)):
-            if prefix not in self.cache.keys():
-                len_prefix = len(word) - i
-                break
+        for prefix in reversed(all_prefixes(word)):
+            in_cache, counter = self._cache_lookup(prefix)
+            if in_cache:
+                return tuple(prefix), tuple(word[len(prefix):])
 
-        propability = len_prefix * 1 / len(self.iolts.get_output_alphabet())
+        return tuple([]), tuple(word)
 
-        population_size = len(self.iolts.get_output_alphabet()) ** len_prefix
-
-        # print(population_size)
-
-        return 1
-
-    def _query_with_step_to(self, word, iterations) -> Optional[str]:
-        for _ in range(iterations):
-            self.pre()
-            if self._step_trace(word):
-                # TODO wrap this function
-                output = self.iolts._output_step_to(None, None) or QUIESCENCE
-                self.post()
-                return output
-            else:
-                self.post()
-
-        return None
-
-    def _step_trace(self, word) -> bool:
+    def _step_trace(self, word, cache_prefix) -> bool:
         for i, letter in enumerate(word):
-            if self.step_to(letter) is None:
-                return False
+            if letter.startswith("?"):
+                if self.step(letter) is None:
+                    # TODO Question for Martin, what happens if i start listen here?
+                    return False
+
+            if letter.startswith("!") or letter == QUIESCENCE:
+                output = self.listen()
+                self._cache_update(cache_prefix + word[:i], output)
+
+                if output != letter:
+                    return False
+
         return True
 
+    def calculate_all_seen_probability(self, word: tuple):
+        in_cache, counter = self._cache_lookup(word)
+        if not in_cache:
+            return 0
+
+        num_cached_outputs = sum(counter.values())
+        num_unique_outputs = len(counter.keys())
+        p_hidden = (1 - 1 / (num_unique_outputs + 1)) ** num_cached_outputs
+        return 1 - p_hidden
+
     def completeness_query(self, word: tuple, observed_set: set) -> bool:
-        # TODO don't use cache
         # The completeness query should not use the cache system.
         # It should always make the real queries on the SUL.
         # The number of real queries is hard to guess, so we let the user assume a number.
@@ -302,31 +328,20 @@ class IoltsMachineSUL(SUL):
 
         saved_num_steps = self.num_steps
         saved_num_queries = self.num_queries
+        saved_num_listens = self.num_listens
+        is_complete = True
 
-        num_iterations = 0
-        p_all_seen = 0
-        # TODO replace with counter
-        seen_outputs = set()
-
-        while p_all_seen < 0.9:
+        while self.calculate_all_seen_probability(word) < self.query_certainty_probability:
             output = self.query(word, False)
-            seen_outputs.add(output)
             if output not in observed_set:
-                self.num_completeness_queries += self.num_queries - saved_num_queries
-                self.num_queries = saved_num_queries
-                self.num_completeness_steps += self.num_steps - saved_num_steps
-                self.num_steps = saved_num_steps
-
-                return False
-            else:
-                num_iterations += 1
-                num_seen_outputs = len(seen_outputs)
-                p_hidden = (1 - 1 / (num_seen_outputs + 1)) ** num_iterations
-                p_all_seen = 1 - p_hidden
+                is_complete = False
+                break
 
         self.num_completeness_queries += self.num_queries - saved_num_queries
         self.num_queries = saved_num_queries
         self.num_completeness_steps += self.num_steps - saved_num_steps
         self.num_steps = saved_num_steps
+        self.num_completeness_listens += self.num_listens - saved_num_listens
+        self.num_listens = saved_num_listens
 
-        return True
+        return is_complete

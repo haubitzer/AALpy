@@ -151,7 +151,7 @@ class ModelCheckerPrecisionOracle:
 class HotSpotPrecisionOracle:
     """
     This precision oracle uses hot spot detection and the completeness query to find counter examples.
-    Hot spots are sections that have the same departure and destination state but different transition letters between.
+    Hot spots are sections that have the same origin and destination state but different transition letters between.
     """
 
     def __init__(self, sul: IoltsMachineSUL):
@@ -161,13 +161,13 @@ class HotSpotPrecisionOracle:
 
         h_minus.remove_self_loops_from_non_quiescence_states()
 
-        for dep, dest in self.find_hot_spots(h_minus):
-            prefix = dep.prefix
+        for origin, dest in self.find_hot_spots(h_minus):
+            prefix = origin.prefix
 
             postfixes = [letter for letter, _ in dest.get_inputs()] + [letter for letter, _ in dest.get_outputs()]
 
             for letter in h_minus.get_input_alphabet():
-                if dep.get_inputs(letter, dest):
+                if origin.get_inputs(letter, dest):
                     for postfix in postfixes:
                         cex = prefix + tuple([letter, postfix])
                         observed_set = set([h_minus.query(cex) for _ in range(50)])
@@ -176,7 +176,7 @@ class HotSpotPrecisionOracle:
                             return cex
 
             for letter in h_minus.get_output_alphabet():
-                if dep.get_outputs(letter, dest):
+                if origin.get_outputs(letter, dest):
                     for postfix in postfixes:
                         cex = prefix + tuple([letter, postfix])
                         observed_set = set([h_minus.query(cex) for _ in range(50)])

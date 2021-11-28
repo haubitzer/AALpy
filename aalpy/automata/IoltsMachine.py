@@ -213,6 +213,9 @@ class IoltsMachine(Automaton):
 
         raise Exception("Unable to match letter")
 
+    def listen(self):
+        return self._output_step_to(None, None) or QUIESCENCE
+
     def random_unroll_step(self) -> tuple[list[str], list[IoltsState]]:
         """
         This step function make a self loop transition if possible and a random transition to a different state.
@@ -249,9 +252,6 @@ class IoltsMachine(Automaton):
 
     def query(self, word: tuple, iterations: int = 30) -> Optional[str]:
         is_valid = False
-
-        # TODO check where this function is needed and than refactor it.
-        # The SUL wrapper should not call this function. It may leads to problem.
 
         for _ in range(iterations):
             self.reset_to_initial()

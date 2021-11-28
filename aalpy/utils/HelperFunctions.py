@@ -147,9 +147,13 @@ def print_learning_info(info: dict):
     if 'cache_saved' in info.keys():
         print(' # MQ Saved by Caching : {}'.format(info['cache_saved']))
     print(' # Steps               : {}'.format(info['steps_learning']))
+    if 'listens_leaning' in info.keys():
+        print(' # Listens             : {}'.format(info['listens_leaning']))
     print('Equivalence Query')
     print(' # Membership Queries  : {}'.format(info['queries_eq_oracle']))
     print(' # Steps               : {}'.format(info['steps_eq_oracle']))
+    if 'listens_eq_oracle' in info.keys():
+        print(' # Listens             : {}'.format(info['listens_eq_oracle']))
     print('-----------------------------------')
 
 

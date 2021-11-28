@@ -6,7 +6,8 @@ from aalpy.learning_algs.approximate.PrecisionOracle import HotSpotPrecisionOrac
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
-from aalpy.utils.HelperFunctions import extend_set, print_observation_table, all_suffixes, print_learning_info
+from aalpy.utils.HelperFunctions import extend_set, print_observation_table, print_learning_info, all_suffixes, \
+    all_prefixes
 
 
 def run_approximated_Iolts_Lstar(
@@ -14,10 +15,10 @@ def run_approximated_Iolts_Lstar(
         output_alphabet: list,
         sul: IoltsMachineSUL,
         oracle,
-        max_iteration: int = 100,  # TODO remove and throw error in case of max iteration
         print_level=2,
 ):
     """ """
+    learning_rounds = 0
     h_minus = None
     h_plus = None
 
@@ -27,10 +28,9 @@ def run_approximated_Iolts_Lstar(
     )
 
     while True:
-        max_iteration -= 1
-        if not (max_iteration > 1):
-            print("Max iteration in OUTER loop")
-            break
+        learning_rounds += 1
+        if not (learning_rounds < 100):
+            raise Exception("Leaning round hit 100")
 
         is_reducible = False
         while not is_reducible:
@@ -53,11 +53,6 @@ def run_approximated_Iolts_Lstar(
                 extend_set(observation_table.E, e_set_causes)
                 observation_table.update_obs_table()
 
-                max_iteration -= 1
-                if not (max_iteration > 1):
-                    print("Max iteration in INNER loop")
-                    return h_minus, h_plus
-
             # Check quiescence reducible
             is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
             extend_set(observation_table.E, e_set_reducible)
@@ -69,22 +64,12 @@ def run_approximated_Iolts_Lstar(
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
-        # TODO check merged states aka. rows for completeness
-        # As discussed, there could be the case that a state doesn't lead to the chaos state even if it should,
-        # the reason for that is that state is enabled by two different traces but only one is in the observation table represented,
-        # The other is not. However, the not-represented trace is never checked for completeness.
-        # We should somehow check if a state is enabled by traces not in the observation table and check this traces for completeness.
-
-        # Idea, if a state has two transition with different letters to the same state, we should check the following trace:
-        # prefix of fork state + letter + n * postfix,
-        # against the SUL or the completeness query
-
-        # It may could happen that states are falsely marked as completed, because the prefix trace was not part of the observation table
-
         # Find counter example with precision oracle
         cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
             cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+            print(all_prefixes(cex))
+            print(all_suffixes(cex))
             print(cex_suffixes)
             extend_set(observation_table.E, cex_suffixes)
             continue
@@ -101,12 +86,15 @@ def run_approximated_Iolts_Lstar(
     print_observation_table(observation_table, "approximated")
 
     info = {
-        'learning_rounds': 0,
+        'learning_rounds': learning_rounds,
         'automaton_size': len(h_minus.states),
         'queries_learning': sul.num_queries,
         'steps_learning': sul.num_steps,
+        'listens_leaning': sul.num_listens,
+        'cache_saved': sul.num_cached_queries,
         'queries_eq_oracle': sul.num_completeness_queries,
         'steps_eq_oracle': sul.num_completeness_steps,
+        'listens_eq_oracle': sul.num_completeness_listens,
         'learning_time': 0,
         'eq_oracle_time': 0,
         'total_time': 0,

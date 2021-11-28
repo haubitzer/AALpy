@@ -97,8 +97,6 @@ class Mcrl2Interface:
         name = Path(property).stem
         folder = "tmp/"
 
-        # print(self.model_as_mcrl2)
-
         make_new_folder = f"mkdir -p {folder} && rm -r {folder} && mkdir {folder}"
         convert_to_lps = f"echo \"{self.model_as_mcrl2}\" | mcrl22lps > {folder}{name}.lps"
         convert_to_pbes = f"lps2pbes -m -s -c --formula={property} {folder}{name}.lps {folder}{name}.pbes"
@@ -129,6 +127,11 @@ class Mcrl2Interface:
         visited = set()
         automaton: IoltsMachine = load_automaton_from_file(path, "iolts")
         print(automaton)
+
+        # TODO
+        # add an cache of counter example to the Lstar.
+        # Change the unroll function so that it walks always until it saw all states.
+        # and then add a bonus suffix to the walk when the same counter example was already in the cache.
 
         while True:
             visited.add(automaton.initial_state)
