@@ -85,8 +85,6 @@ s21 -> s0  [label="!acousticAlarm_OFF"];
 
 s22 -> s3  [label="!acousticAlarm_OFF"];
 
-
-
 __start0 [label="", shape=none];
 __start0 -> s0  [label=""];
 }

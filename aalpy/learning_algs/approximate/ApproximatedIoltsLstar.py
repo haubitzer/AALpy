@@ -1,3 +1,5 @@
+from collections import Counter
+
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
     ApproximatedIoltsObservationTable,
@@ -19,8 +21,7 @@ def run_approximated_Iolts_Lstar(
 ):
     """ """
     learning_rounds = 0
-    h_minus = None
-    h_plus = None
+    cex_cache = Counter()
 
     # Initialize (S,E,T)
     observation_table = ApproximatedIoltsObservationTable(
@@ -67,11 +68,15 @@ def run_approximated_Iolts_Lstar(
         # Find counter example with precision oracle
         cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
+            if cex in cex_cache.elements():
+                print(f"Added to S: {extend_set(observation_table.S, all_prefixes(cex[:-1]))}")
+
+            cex_cache.update(cex)
             cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
             print(all_prefixes(cex))
             print(all_suffixes(cex))
             print(cex_suffixes)
-            extend_set(observation_table.E, cex_suffixes)
+            print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
             continue
 
         cex = HotSpotPrecisionOracle(sul).find_cex(h_minus, h_plus, observation_table)
