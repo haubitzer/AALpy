@@ -33,8 +33,8 @@ def run_approximated_Iolts_Lstar(
         if not (learning_rounds < 100):
             raise Exception("Leaning round hit 100")
 
-        is_reducible = False
-        while not is_reducible:
+        is_reducible = True
+        while is_reducible:
 
             # Update (S,E,T)
             observation_table.update_obs_table()
@@ -45,19 +45,25 @@ def run_approximated_Iolts_Lstar(
 
             while not (is_closed and is_consistent):
                 is_closed, s_set_causes = observation_table.is_globally_closed()
-                print("Closed S set: " + str(s_set_causes))
-                extend_set(observation_table.S, s_set_causes)
-                observation_table.update_obs_table()
+                if not is_closed:
+                    print("Closed S set: " + str(extend_set(observation_table.S, s_set_causes)))
+                    observation_table.update_obs_table()
+                    continue
 
                 is_consistent, e_set_causes = observation_table.is_globally_consistent()
-                print("Consistent E set: " + str(e_set_causes))
-                extend_set(observation_table.E, e_set_causes)
-                observation_table.update_obs_table()
+                if not is_consistent:
+                    print("Consistent E set: " + str(extend_set(observation_table.E, e_set_causes)))
+                    observation_table.update_obs_table()
+                    continue
 
             # Check quiescence reducible
             is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
-            extend_set(observation_table.E, e_set_reducible)
-            print("Found E by quiescence reducible: " + str(e_set_reducible))
+            added_e_set = extend_set(observation_table.E, e_set_reducible)
+            if added_e_set:
+                print("Found E by quiescence reducible: " + str())
+            elif is_reducible and not added_e_set:
+                print("Quiescence reducible failed!")
+                break
 
         # print_observation_table(observation_table, "approximated")
 
@@ -68,22 +74,19 @@ def run_approximated_Iolts_Lstar(
         # Find counter example with precision oracle
         cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
-            if cex in cex_cache.elements():
+            if str(cex) in cex_cache.elements():
                 print(f"Added to S: {extend_set(observation_table.S, all_prefixes(cex[:-1]))}")
-
-            cex_cache.update(cex)
-            cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
-            print(all_prefixes(cex))
-            print(all_suffixes(cex))
-            print(cex_suffixes)
-            print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
+            else:
+                cex_cache.update([str(cex)])
+                cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+                print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
             continue
 
-        cex = HotSpotPrecisionOracle(sul).find_cex(h_minus, h_plus, observation_table)
-        if cex is not None:
-            cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
-            extend_set(observation_table.E, cex_suffixes)
-            continue
+        #cex = HotSpotPrecisionOracle(sul).find_cex(h_minus, h_plus, observation_table)
+        #if cex is not None:
+        #    cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+        #    print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
+        #    continue
 
         # Stop learning loop, hypotheses are good enough.
         break

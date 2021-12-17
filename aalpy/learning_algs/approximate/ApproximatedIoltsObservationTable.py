@@ -150,7 +150,7 @@ class ApproximatedIoltsObservationTable:
 
                 for a in s2_cell_values:
                     if a not in s1_cell_values:
-                        return False, [t]
+                        return True, [t]
 
                     s_prime_1 = None
                     s_prime_2 = None
@@ -170,7 +170,7 @@ class ApproximatedIoltsObservationTable:
 
                 past.append((s1, s2))
 
-        return True, []
+        return False, []
 
     def s_dot_a(self):
         """
@@ -202,6 +202,8 @@ class ApproximatedIoltsObservationTable:
 
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
+                # update every via the cache
+                self.T[s][e].update(self.sul.receive_cache(s + e))
                 continue
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
@@ -222,12 +224,12 @@ class ApproximatedIoltsObservationTable:
                     self.T_completed[s][e] = True
                 continue
 
-            output = self.sul.query(s + e)
+            output = self.sul.query(s + e, False)
 
             if output is None:
                 continue
 
-            self.T[s][e].add(output)
+            self.T[s][e].update(self.sul.receive_cache(s + e))
             self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
 
         # Sorts the set of T(s,e) to be deterministic
@@ -235,10 +237,10 @@ class ApproximatedIoltsObservationTable:
             self.T[s].update(dict(sorted(self.T[s].items())))
 
     def get_row_key(self, s) -> tuple:
-        return tuple(self.row(s).items())
+        return tuple(sorted(self.row(s).items()))
 
     def get_row_plus_key(self, s) -> tuple:
-        return tuple(self.row_plus(s).items())
+        return tuple(sorted(self.row_plus(s).items()))
 
     def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()
@@ -277,6 +279,8 @@ class ApproximatedIoltsObservationTable:
             initial_state, list(states_dict.values()) + [chaos_quiescence_state]
         )
 
+
+        # ((('?lock',), frozenset({'!opticalAlarm_ON'})), ((), frozenset({'!opticalAlarm_ON'})))
         # TODO: Change to distinguish states
         # the ioco checker fails sometime if we use state_distinguish, but we should. The reason we should is that in the automata
         # are state that are not reach able and doesn't have any value for us.
@@ -318,6 +322,9 @@ class ApproximatedIoltsObservationTable:
             for output_tuple in self.A_output + [QUIESCENCE_TUPLE]:
                 output = output_tuple[0]
 
+                if not self.row(s)[EMPTY_WORD]:
+                    continue
+
                 if output in self.row(s)[EMPTY_WORD]:
                     row = self.get_row_plus_key(s + output_tuple)
                     if output_tuple == QUIESCENCE_TUPLE:
@@ -340,6 +347,11 @@ class ApproximatedIoltsObservationTable:
             for _, destination in state.get_quiescence():
                 if state != destination and state != chaos_state:
                     automaton.merge_into(state, destination)
+
+        for sink_state in automaton.states:
+            if not sink_state.is_input_enabled() and sink_state.is_quiescence():
+                for state, letter in itertools.product(automaton.states, automaton.get_input_alphabet()):
+                    state.remove_input(letter, sink_state)
 
         automaton.characterization_set = self.E
 

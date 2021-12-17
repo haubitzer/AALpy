@@ -199,6 +199,9 @@ class IoltsMachineSUL(SUL):
         self.num_steps += 1
         return self.iolts.step(letter)
 
+    def is_healthy(self):
+        return self.iolts.is_healthy()
+
     def listen(self):
         self.num_listens += 1
         return self.iolts.listen()
@@ -209,10 +212,20 @@ class IoltsMachineSUL(SUL):
             self.num_cached_queries += 1
             return choice(list(counter.elements()))
 
+        if in_cache and all(k is None for k in counter.keys()):
+            return None
+
         output = self._query_with_step(word)
         self._cache_update(word, output)
 
         return output
+
+    def receive_cache(self, word) -> set:
+        in_cache, counter = self._cache_lookup(word)
+        if not in_cache:
+            return set()
+
+        return set(counter.elements())
 
     def _cache_update(self, word, output):
         if word not in self.cache.keys():
@@ -262,7 +275,7 @@ class IoltsMachineSUL(SUL):
 
         for prefix in reversed(all_prefixes(word)):
             in_cache, counter = self._cache_lookup(prefix)
-            if in_cache:
+            if in_cache and not all(k is None for k in counter.keys()):
                 return tuple(prefix), tuple(word[len(prefix):])
 
         return tuple([]), tuple(word)
@@ -270,11 +283,20 @@ class IoltsMachineSUL(SUL):
     def _step_trace(self, word, cache_prefix) -> bool:
         for i, letter in enumerate(word):
             if letter.startswith("?"):
-                if self.step(letter) is None:
-                    # TODO Question for Martin, what happens if i start listen here?
+                self.step(letter)
+                if not self.is_healthy():
+                    output = self.listen()
+                    self._cache_update(cache_prefix + word[:i], output)
                     return False
 
-            if letter.startswith("!") or letter == QUIESCENCE:
+            if letter.startswith("!"):
+                output = self.listen()
+                self._cache_update(cache_prefix + word[:i], output)
+
+                if output != letter:
+                    return False
+
+            if letter == QUIESCENCE:
                 output = self.listen()
                 self._cache_update(cache_prefix + word[:i], output)
 

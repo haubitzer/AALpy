@@ -1,0 +1,2 @@
+[true* . out_acousticAlarm_OFF . !out_acousticAlarm_ON* . out_acousticAlarm_OFF] false && [true* . out_acousticAlarm_ON . !out_acousticAlarm_OFF* . out_acousticAlarm_ON] false
+

@@ -189,11 +189,23 @@ class IoltsMachine(Automaton):
         self.current_state: IoltsState
         self.initial_state: IoltsState
         self.states: list[IoltsState]
+        self.not_enabled_state = None
+        self.healthy = True
+
+    def reset_to_initial(self):
+        """
+        Resets the current state of the automaton to the initial state
+        """
+        self.current_state = self.initial_state
+        self.healthy = True
 
     def step(self, letter):
-        assert self.is_input_complete()
         assert letter.startswith("?")
-        return self.step_to(letter, None)
+        result = self.step_to(letter, None)
+        self.healthy &= result is not None
+
+    def is_healthy(self) -> bool:
+        return self.healthy
 
     def step_to(self, letter: string, destination: IoltsState = None) -> Optional[str]:
         """
@@ -398,6 +410,8 @@ class IoltsMachine(Automaton):
 
     def remove_self_loops_from_non_quiescence_states(self):
         for state, letter in itertools.product(self.states, self.get_input_alphabet()):
+            if state.state_id == "N":
+                continue
             if not state.is_quiescence():
                 state.remove_input(letter, state)
 
