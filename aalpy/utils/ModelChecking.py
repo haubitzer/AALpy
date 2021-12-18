@@ -1,9 +1,12 @@
 import os
 import re
-import aalpy.paths
 from collections import defaultdict
 
-from aalpy.automata import Mdp, StochasticMealyMachine
+import aalpy.paths
+from aalpy.SULs import MealySUL, DfaSUL, MooreSUL
+from aalpy.automata import Mdp, StochasticMealyMachine, MealyMachine, Dfa, MooreMachine
+from aalpy.base import DeterministicAutomaton
+from aalpy.oracles import RandomWMethodEqOracle
 
 prism_prob_output_regex = re.compile("Result: (\d+\.\d+)")
 
@@ -179,7 +182,7 @@ def model_check_experiment(path_to_properties, correct_prop_values, mdp, precisi
 
     diff_2_correct = dict()
     for ind, val in enumerate(model_checking_results.values()):
-        diff_2_correct[f'prop{ind+1}'] = round(abs(correct_prop_values[ind] - val), precision)
+        diff_2_correct[f'prop{ind + 1}'] = round(abs(correct_prop_values[ind] - val), precision)
 
     results = {key: round(val, precision) for key, val in model_checking_results.items()}
     return results, diff_2_correct
@@ -198,7 +201,7 @@ def stop_based_on_confidence(hypothesis, property_based_stopping, print_level=2)
 
         True if absolute error for all properties is smaller then property_based_stopping[2]
     """
-    from aalpy.utils import smm_to_mdp_conversion
+    from aalpy.automata.StochasticMealyMachine import smm_to_mdp_conversion
 
     path_2_prop = property_based_stopping[0]
     correct_values = property_based_stopping[1]
@@ -220,3 +223,59 @@ def stop_based_on_confidence(hypothesis, property_based_stopping, print_level=2)
             return False
 
     return True
+
+
+def compare_automata(aut_1: DeterministicAutomaton, aut_2: DeterministicAutomaton, num_cex=10):
+    """
+    Finds cases of non-conformance between first and second automaton. This is done by performing RandomW equivalence
+    check. It is possible that number of found counterexamples is smaller than num_cex, as no counterexample will be a
+    suffix of a previously found counterexample.
+
+    Args:
+
+        aut_1: first automaton
+
+        aut_2: second automaton
+
+        num_cex: max. number of searches for counterexamples
+
+    Returns:
+
+        A list of input sequences that revel different behaviour on both automata. Counterexamples are sorted by length.
+    """
+    #
+    type_map = {MooreMachine: MooreSUL, Dfa: DfaSUL, MealyMachine: MealySUL}
+    assert set(aut_1.get_input_alphabet()) == set(aut_2.get_input_alphabet())
+
+    input_al = aut_1.get_input_alphabet()
+    # larger automaton is used as hypothesis, as then test-cases will contain prefixes leading to states
+    # not in smaller automaton
+    base_automaton, test_automaton = (aut_1, aut_2) if aut_1.size < aut_2.size else (aut_2, aut_1)
+    base_sul = type_map[type(base_automaton)](base_automaton)
+
+    # compute prefixes for all states of the test automaton (needed for advanced eq. oracle)
+    for state in test_automaton.states:
+        if not state.prefix:
+            state.prefix = test_automaton.get_shortest_path(test_automaton.initial_state, state)
+
+    # setup  the eq oracle
+    eq_oracle = RandomWMethodEqOracle(input_al, base_sul, walks_per_state=min(100, len(input_al) * 10), walk_len=10)
+
+    found_cex = []
+    # to avoid near "infinite" loops due to while loop and set requirement
+    # that is, if you can only find 1 cex and all other cexs are suffixes of that cex, first while condition will never
+    # be reached
+    failsafe_counter = 0
+    failsafe_stopping = num_cex * 100
+    while len(found_cex) < num_cex or failsafe_counter == failsafe_stopping:
+        cex = eq_oracle.find_cex(test_automaton)
+        # if no counterexample can be found terminate the loop
+        if cex is None:
+            break
+        if cex not in found_cex:
+            found_cex.append(cex)
+        failsafe_counter += 1
+
+    found_cex.sort(key=len)
+
+    return found_cex

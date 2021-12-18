@@ -1,4 +1,4 @@
-from aalpy.base import AutomatonState, Automaton
+from aalpy.base import AutomatonState, DeterministicAutomaton
 
 
 class DfaState(AutomatonState):
@@ -10,7 +10,7 @@ class DfaState(AutomatonState):
         self.is_accepting = is_accepting
 
 
-class Dfa(Automaton):
+class Dfa(DeterministicAutomaton):
     """
     Deterministic finite automaton.
     """

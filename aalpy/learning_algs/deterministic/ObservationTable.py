@@ -208,3 +208,24 @@ class ObservationTable:
         automaton.characterization_set = self.E
 
         return automaton
+
+    def shrink(self, hypothesis):
+        'WIP'
+        init_set = [tuple()] if self.automaton_type != 'mealy' else []
+        init_set.extend(self.A)
+        e_set = hypothesis.compute_characterization_set(char_set_init=init_set)
+        ordered_e_set = list(init_set)
+        ordered_e_set.extend([el for el in e_set if el not in init_set])
+
+        self.T.clear()
+        self.E = ordered_e_set
+
+        for s in list(self.S) + list(self.s_dot_a()):
+            for e in self.E:
+                out = hypothesis.execute_sequence(hypothesis.initial_state, s + e)
+                self.T[s] += (out[-1],)
+
+        incons = self.get_causes_of_inconsistency()
+        print("INCONSISTENCY",incons)
+        clos = self.get_rows_to_close()
+        print("CLOSEDNESS",clos)
