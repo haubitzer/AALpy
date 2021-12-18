@@ -135,4 +135,4 @@ dmypy.json
 .idea/
 
 # temp folder for mcrl2 files
-.tmp/
+tmp/
