@@ -1,8 +1,9 @@
+from collections import Counter
 from time import sleep
 from typing import Optional
 
 from aalpy.SULs import IoltsMachineSUL
-from aalpy.automata import IoltsMachine
+from aalpy.automata import IoltsMachine, IoltsState
 from aalpy.base import SUL
 from aalpy.utils import IocoChecker, Mcrl2ModelChecker
 from aalpy.utils import visualize_automaton
@@ -42,7 +43,7 @@ class UserInputPrecisionOracle:
         self.sul = sul
         self.curr_hypothesis = 0
 
-    def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[tuple]:
+    def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[list[str]]:
 
         self.curr_hypothesis += 1
         trace = []
@@ -145,4 +146,3 @@ class ModelCheckerPrecisionOracle:
             return cex
 
         return None
-

@@ -3,11 +3,12 @@ from __future__ import annotations
 import itertools
 import string
 from collections import defaultdict
-from copy import deepcopy
 from random import choice
 from typing import Optional
 
 from aalpy.base import Automaton, AutomatonState
+
+QUIESCENCE = 'QUIESCENCE'
 
 
 class IoltsState(AutomatonState):
@@ -66,10 +67,10 @@ class IoltsState(AutomatonState):
     def get_quiescence(self, destination: IoltsState = None) -> list[tuple[str, IoltsState]]:
 
         result = [
-                (quiescence, state)
-                for quiescence, states in self.quiescence.items()
-                for state in states
-            ]
+            (quiescence, state)
+            for quiescence, states in self.quiescence.items()
+            for state in states
+        ]
 
         result = (
             result
@@ -102,18 +103,18 @@ class IoltsState(AutomatonState):
         self.transitions.update(self.outputs)
         # clear the quiescence entries, the are not valid
         self.quiescence.clear()
-        self.transitions.pop("quiescence", None)
+        self.transitions.pop(QUIESCENCE, None)
 
     def add_quiescence(self, new_state: IoltsState = None):
         if new_state is None:
             new_state = self
 
         new_value = (
-            tuple([new_state]) + self.quiescence["quiescence"]
-            if "quiescence" in self.quiescence
+            tuple([new_state]) + self.quiescence[QUIESCENCE]
+            if QUIESCENCE in self.quiescence
             else tuple([new_state])
         )
-        self.quiescence.update({"quiescence": tuple(set(list(new_value)))})
+        self.quiescence.update({QUIESCENCE: tuple(set(list(new_value)))})
         self.transitions.update(self.quiescence)
 
     def remove_input(self, input, new_state):
@@ -131,10 +132,10 @@ class IoltsState(AutomatonState):
         self.transitions.update(self.outputs)
 
     def remove_quiescence(self, new_state):
-        new_value = list(self.quiescence["quiescence"])
+        new_value = list(self.quiescence[QUIESCENCE])
         if new_state in new_value:
             new_value.remove(new_state)
-        self.quiescence.update({"quiescence": tuple(new_value)})
+        self.quiescence.update({QUIESCENCE: tuple(new_value)})
         self.transitions.update(self.quiescence)
 
     def is_input_enabled(self) -> bool:
@@ -188,10 +189,23 @@ class IoltsMachine(Automaton):
         self.current_state: IoltsState
         self.initial_state: IoltsState
         self.states: list[IoltsState]
+        self.not_enabled_state = None
+        self.healthy = True
+
+    def reset_to_initial(self):
+        """
+        Resets the current state of the automaton to the initial state
+        """
+        self.current_state = self.initial_state
+        self.healthy = True
 
     def step(self, letter):
-        assert self.is_input_complete()
-        return self.step_to(letter, None)
+        assert letter.startswith("?")
+        result = self.step_to(letter, None)
+        self.healthy &= result is not None
+
+    def is_healthy(self) -> bool:
+        return self.healthy
 
     def step_to(self, letter: string, destination: IoltsState = None) -> Optional[str]:
         """
@@ -206,10 +220,13 @@ class IoltsMachine(Automaton):
         if letter.startswith("!"):
             return self._output_step_to(letter, destination)
 
-        if letter == "quiescence":
+        if letter == QUIESCENCE:
             return self._quiescence_step_to()
 
         raise Exception("Unable to match letter")
+
+    def listen(self):
+        return self._output_step_to(None, None) or QUIESCENCE
 
     def random_unroll_step(self) -> tuple[list[str], list[IoltsState]]:
         """
@@ -221,8 +238,10 @@ class IoltsMachine(Automaton):
         same_state_trans = self.current_state.get_same_state_transitions()
         diff_state_trans = self.current_state.get_diff_state_transitions()
 
-        if 'quiescence' in same_state_trans: same_state_trans.remove('quiescence')
-        if 'quiescence' in diff_state_trans: diff_state_trans.remove('quiescence')
+        if QUIESCENCE in same_state_trans:
+            same_state_trans.remove(QUIESCENCE)
+        if QUIESCENCE in diff_state_trans:
+            diff_state_trans.remove(QUIESCENCE)
 
         trace = []
         visited = []
@@ -244,6 +263,26 @@ class IoltsMachine(Automaton):
                 raise Exception("Different state transition was not successful")
 
         return trace, visited
+
+    def query(self, word: tuple, iterations: int = 30) -> Optional[str]:
+        is_valid = False
+
+        for _ in range(iterations):
+            self.reset_to_initial()
+            is_valid = True
+            for letter in word:
+                is_valid = is_valid and self.step_to(letter) is not None
+            if is_valid:
+                break
+
+        if not is_valid:
+            self.reset_to_initial()
+            return None
+
+        output = self._output_step_to(None, None)
+        self.reset_to_initial()
+
+        return output if output is not None else QUIESCENCE
 
     def _input_step_to(
             self, input: str, destination: IoltsState = None
@@ -373,6 +412,8 @@ class IoltsMachine(Automaton):
 
     def remove_self_loops_from_non_quiescence_states(self):
         for state, letter in itertools.product(self.states, self.get_input_alphabet()):
+            if state.state_id == "N":
+                continue
             if not state.is_quiescence():
                 state.remove_input(letter, state)
 

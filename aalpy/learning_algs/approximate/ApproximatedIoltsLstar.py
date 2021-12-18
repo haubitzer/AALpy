@@ -1,11 +1,14 @@
+from collections import Counter
+
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
     ApproximatedIoltsObservationTable,
 )
+
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
-from aalpy.utils.HelperFunctions import extend_set, print_observation_table, all_suffixes
+from aalpy.utils.HelperFunctions import extend_set, print_learning_info, all_prefixes
 
 
 def run_approximated_Iolts_Lstar(
@@ -13,12 +16,10 @@ def run_approximated_Iolts_Lstar(
         output_alphabet: list,
         sul: IoltsMachineSUL,
         oracle,
-        max_iteration: int = 30,  # TODO remove and throw error in case of max iteration
-        print_level=2,
 ):
     """ """
-    h_minus = None
-    h_plus = None
+    learning_rounds = 0
+    cex_cache = Counter()
 
     # Initialize (S,E,T)
     observation_table = ApproximatedIoltsObservationTable(
@@ -26,13 +27,12 @@ def run_approximated_Iolts_Lstar(
     )
 
     while True:
-        max_iteration -= 1
-        if not (max_iteration > 1):
-            print("Max iteration in OUTER loop")
-            break
+        learning_rounds += 1
+        if not (learning_rounds < 100):
+            raise Exception("Leaning round hit 100")
 
-        is_reducible = False
-        while not is_reducible:
+        is_reducible = True
+        while is_reducible:
 
             # Update (S,E,T)
             observation_table.update_obs_table()
@@ -43,48 +43,64 @@ def run_approximated_Iolts_Lstar(
 
             while not (is_closed and is_consistent):
                 is_closed, s_set_causes = observation_table.is_globally_closed()
-                print("Closed S set: " + str(s_set_causes))
-                extend_set(observation_table.S, s_set_causes)
-                observation_table.update_obs_table()
+                if not is_closed:
+                    print("Closed S set: " + str(extend_set(observation_table.S, s_set_causes)))
+                    observation_table.update_obs_table()
+                    continue
 
                 is_consistent, e_set_causes = observation_table.is_globally_consistent()
-                print("Consistent E set: " + str(e_set_causes))
-                extend_set(observation_table.E, e_set_causes)
-                observation_table.update_obs_table()
-
-                max_iteration -= 1
-                if not (max_iteration > 1):
-                    print("Max iteration in INNER loop")
-                    return h_minus, h_plus
+                if not is_consistent:
+                    print("Consistent E set: " + str(extend_set(observation_table.E, e_set_causes)))
+                    observation_table.update_obs_table()
+                    continue
 
             # Check quiescence reducible
             is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
-            extend_set(observation_table.E, e_set_reducible)
-            print("Found E by quiescence reducible: " + str(e_set_reducible))
+            added_e_set = extend_set(observation_table.E, e_set_reducible)
+            if added_e_set:
+                print(f"Found E by quiescence reducible: {added_e_set}")
+            elif is_reducible and not added_e_set:
+                print(f"Quiescence reducible failed! {e_set_reducible}")
+                break
 
-        print_observation_table(observation_table, "approximated")
+        # print_observation_table(observation_table, "approximated")
 
         # Construct H- and H+
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus()
 
-        # TODO check merged states aka. rows for completeness
-        # As discussed, there could be the case that a state doesn't lead to the chaos state even if it should,
-        # the reason for that is that state is enabled by two different traces but only one is in the observation table represented,
-        # The other is not. However, the not-represented trace is never checked for completeness.
-        # We should somehow check if a state is enabled by traces not in the observation table and check this traces for completeness.
-
-        # Idea, if a state has two transition with different letters to the same state, we should check the trace + the different + letter + n post fix,
-        # against the SUL or the completeness query
-
         # Find counter example with precision oracle
         cex = oracle.find_cex(h_minus, h_plus, observation_table)
         if cex is not None:
-            extend_set(observation_table.E, all_suffixes(cex))
+            if str(cex) in cex_cache.elements():
+                print(f"Added to S: {extend_set(observation_table.S, all_prefixes(cex[:-1]))}")
+            else:
+                cex_cache.update([str(cex)])
+                cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+                print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
             continue
-        else:
-            # Stop learning loop, hypotheses are good enough.
-            break
 
-    print_observation_table(observation_table, "approximated")
+        # Stop learning loop, hypotheses are good enough.
+        break
+
+    # print_observation_table(observation_table, "approximated")
+
+    info = {
+        'learning_rounds': learning_rounds,
+        'automaton_size': len(h_minus.states),
+        'queries_learning': sul.num_queries,
+        'steps_learning': sul.num_steps,
+        'listens_leaning': sul.num_listens,
+        'cache_saved': sul.num_cached_queries,
+        'queries_eq_oracle': sul.num_completeness_queries,
+        'steps_eq_oracle': sul.num_completeness_steps,
+        'listens_eq_oracle': sul.num_completeness_listens,
+        'learning_time': 0,
+        'eq_oracle_time': 0,
+        'total_time': 0,
+        'characterization set': observation_table.E
+    }
+
+    print_learning_info(info)
+
     return h_minus, h_plus

@@ -1,0 +1,90 @@
+digraph carAlarmSystem {
+s0 [label=s0];
+s1;
+s2 [label=s2];
+s3 [label=s3];
+s4 [label=s4];
+s5 [label=s5];
+s6 [label=s6];
+s7 [label=s7];
+s8 [label=s8];
+s9 [label=s9];
+s9 [label=s9];
+s10 [label=s10];
+s11 [label=s11];
+s12 [label=s12];
+s13 [label=s13];
+s14 [label=s14];
+s15 [label=s15];
+s16 [label=s16];
+s17 [label=s17];
+s18 [label=s18];
+s19 [label=s19];
+s20 [label=s20];
+s21 [label=s21];
+s22 [label=s22];
+
+
+
+s0 -> s6  [label="?close"];
+s0 -> s17  [label="?lock"];
+
+s1 -> s3  [label="!opticalAlarm_OFF"];
+
+s2 -> s11  [label="!acousticAlarm_OFF"];
+
+s3 -> s0  [label="?unlock"];
+s3 -> s12  [label="?close"];
+
+s4 -> s1  [label="!acousticAlarm_OFF"];
+s4 -> s22  [label="!opticalAlarm_OFF"];
+
+s5 -> s6  [label="!alarmArmed_OFF"];
+
+s6 -> s0  [label="?open"];
+s6 -> s16  [label="?lock"];
+
+s7 -> s8  [label="!acousticAlarm_ON"];
+
+s8 -> s2  [label="!wait_30"];
+s8 -> s10  [label="?unlock"];
+s8 -> s20  [label="?unlock"];
+
+s9 -> s0  [label="!opticalAlarm_OFF"];
+
+s10 -> s9  [label="!acousticAlarm_OFF"];
+
+s11 -> s4 [label="!wait_270"];
+s11 -> s10  [label="?unlock"];
+s11 -> s20  [label="?unlock"];
+
+s12 -> s13  [label="!alarmArmed_ON"];
+
+s13 -> s5  [label="?unlock"];
+s13 -> s14  [label="?open"];
+
+s14 -> s15  [label="!alarmArmed_OFF"];
+s14 -> s18  [label="!alarmArmed_OFF"];
+
+s15 -> s7  [label="!opticalAlarm_ON"];
+
+s16 -> s6  [label="?unlock"];
+s16 -> s12  [label="!wait_20"];
+s16 -> s17  [label="?open"];
+
+s17 -> s0  [label="?unlock"];
+s17 -> s16  [label="?close"];
+
+s18 -> s19  [label="!acousticAlarm_ON"];
+
+s19 -> s8  [label="!opticalAlarm_ON"];
+
+s20 -> s21  [label="!opticalAlarm_OFF"];
+
+s21 -> s0  [label="!acousticAlarm_OFF"];
+
+s22 -> s3  [label="!acousticAlarm_OFF"];
+
+__start0 [label="", shape=none];
+__start0 -> s0  [label=""];
+}

@@ -1,0 +1,2 @@
+[true* . out_opticalAlarm_OFF . !out_opticalAlarm_ON* . out_opticalAlarm_OFF] false && [true* . out_opticalAlarm_ON . !out_opticalAlarm_OFF* . out_opticalAlarm_ON] false
+
