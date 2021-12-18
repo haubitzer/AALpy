@@ -27,7 +27,10 @@ def longest_prefix_cex_processing(s_union_s_dot_a: list, cex: tuple, closedness=
     trimmed_suffix = None
 
     for p in prefixes:
-        if list(p) == cex[:len(p)]:
+        if not isinstance(p, list):
+            p = list(p)
+
+        if p == cex[:len(p)]:
             trimmed_suffix = cex[len(p):]
             break
 

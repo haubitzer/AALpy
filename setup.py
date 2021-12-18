@@ -18,7 +18,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Edi Muskardin',
     author_email='edi.muskardin@silicon-austria.com',
-    description='An active utils learning library',
+    description='An active automata learning library',
     classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: MIT License",
