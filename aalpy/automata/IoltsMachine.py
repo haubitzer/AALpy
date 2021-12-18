@@ -238,8 +238,10 @@ class IoltsMachine(Automaton):
         same_state_trans = self.current_state.get_same_state_transitions()
         diff_state_trans = self.current_state.get_diff_state_transitions()
 
-        if QUIESCENCE in same_state_trans: same_state_trans.remove(QUIESCENCE)
-        if QUIESCENCE in diff_state_trans: diff_state_trans.remove(QUIESCENCE)
+        if QUIESCENCE in same_state_trans:
+            same_state_trans.remove(QUIESCENCE)
+        if QUIESCENCE in diff_state_trans:
+            diff_state_trans.remove(QUIESCENCE)
 
         trace = []
         visited = []

@@ -261,7 +261,6 @@ class ApproximatedIoltsObservationTable:
             if s == EMPTY_WORD:
                 initial_state = state
 
-
         # add transitions based on extended S set
         for s in self.S:
             state = states_dict[s]
@@ -278,12 +277,6 @@ class ApproximatedIoltsObservationTable:
         automaton = IoltsMachine(
             initial_state, list(states_dict.values()) + [chaos_quiescence_state]
         )
-
-
-        # ((('?lock',), frozenset({'!opticalAlarm_ON'})), ((), frozenset({'!opticalAlarm_ON'})))
-        # TODO: Change to distinguish states
-        # the ioco checker fails sometime if we use state_distinguish, but we should. The reason we should is that in the automata
-        # are state that are not reach able and doesn't have any value for us.
 
         return automaton
 
@@ -348,6 +341,7 @@ class ApproximatedIoltsObservationTable:
                 if state != destination and state != chaos_state:
                     automaton.merge_into(state, destination)
 
+        # Remove sink state
         for sink_state in automaton.states:
             if not sink_state.is_input_enabled() and sink_state.is_quiescence():
                 for state, letter in itertools.product(automaton.states, automaton.get_input_alphabet()):

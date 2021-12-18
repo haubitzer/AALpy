@@ -4,12 +4,11 @@ from aalpy.SULs import IoltsMachineSUL
 from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
     ApproximatedIoltsObservationTable,
 )
-from aalpy.learning_algs.approximate.PrecisionOracle import HotSpotPrecisionOracle
+
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
-from aalpy.utils.HelperFunctions import extend_set, print_observation_table, print_learning_info, all_suffixes, \
-    all_prefixes
+from aalpy.utils.HelperFunctions import extend_set, print_learning_info, all_prefixes
 
 
 def run_approximated_Iolts_Lstar(
@@ -17,7 +16,6 @@ def run_approximated_Iolts_Lstar(
         output_alphabet: list,
         sul: IoltsMachineSUL,
         oracle,
-        print_level=2,
 ):
     """ """
     learning_rounds = 0
@@ -60,9 +58,9 @@ def run_approximated_Iolts_Lstar(
             is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
             added_e_set = extend_set(observation_table.E, e_set_reducible)
             if added_e_set:
-                print("Found E by quiescence reducible: " + str())
+                print(f"Found E by quiescence reducible: {added_e_set}")
             elif is_reducible and not added_e_set:
-                print("Quiescence reducible failed!")
+                print(f"Quiescence reducible failed! {e_set_reducible}")
                 break
 
         # print_observation_table(observation_table, "approximated")
@@ -82,16 +80,10 @@ def run_approximated_Iolts_Lstar(
                 print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
             continue
 
-        #cex = HotSpotPrecisionOracle(sul).find_cex(h_minus, h_plus, observation_table)
-        #if cex is not None:
-        #    cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
-        #    print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
-        #    continue
-
         # Stop learning loop, hypotheses are good enough.
         break
 
-    print_observation_table(observation_table, "approximated")
+    # print_observation_table(observation_table, "approximated")
 
     info = {
         'learning_rounds': learning_rounds,

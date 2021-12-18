@@ -43,7 +43,7 @@ class UserInputPrecisionOracle:
         self.sul = sul
         self.curr_hypothesis = 0
 
-    def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[tuple]:
+    def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[list[str]]:
 
         self.curr_hypothesis += 1
         trace = []
@@ -146,59 +146,3 @@ class ModelCheckerPrecisionOracle:
             return cex
 
         return None
-
-
-class HotSpotPrecisionOracle:
-    """
-    This precision oracle uses hot spot detection and the completeness query to find counter examples.
-    Hot spots are sections that have the same origin and destination state but different transition letters between.
-    """
-
-    def __init__(self, sul: IoltsMachineSUL):
-        self.sul = sul
-
-    def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[tuple]:
-
-        h_minus.remove_self_loops_from_non_quiescence_states()
-
-        for origin, dest in self.find_hot_spots(h_minus):
-            prefix = origin.prefix
-
-            postfixes = [letter for letter, _ in dest.get_inputs()] + [letter for letter, _ in dest.get_outputs()]
-
-            for letter in h_minus.get_input_alphabet():
-                if origin.get_inputs(letter, dest):
-                    for postfix in postfixes:
-                        cex = prefix + tuple([letter, postfix])
-                        observed_set = set([h_minus.query(cex) for _ in range(50)])
-                        if not self.sul.completeness_query(cex, observed_set):
-                            print("Found hot spot counter example: " + str(cex))
-                            return cex
-
-            for letter in h_minus.get_output_alphabet():
-                if origin.get_outputs(letter, dest):
-                    for postfix in postfixes:
-                        cex = prefix + tuple([letter, postfix])
-                        observed_set = set([h_minus.query(cex) for _ in range(50)])
-                        if not self.sul.completeness_query(cex, observed_set):
-                            print("Found hot spot counter example: " + str(cex))
-                            return cex
-
-        return None
-
-    def find_hot_spots(self, automata: IoltsMachine) -> list[tuple[IoltsState, IoltsState]]:
-        result = []
-
-        for state in automata.states:
-            same_dest_count = Counter()
-            for letter in automata.get_input_alphabet():
-                same_dest_count.update(dest for letter, dest in state.get_inputs(letter, None))
-
-            for letter in automata.get_output_alphabet():
-                same_dest_count.update(dest for letter, dest in state.get_outputs(letter, None))
-
-            for dest, count in same_dest_count.items():
-                if count > 1 and dest != state:
-                    result.append(tuple([state, dest]))
-
-        return result

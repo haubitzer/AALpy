@@ -19,31 +19,30 @@ class Mcrl2ModelChecker:
         self.sul = sul
 
     def add_safety_property(self, safety_property: str):
-        # TODO check if path exits
+        assert os.path.isfile(safety_property), "Path is not a file"
         self.safety_properties.append(safety_property)
 
     def add_liveness_property(self, liveness_property: str):
+        assert os.path.isfile(liveness_property), "Path is not a file"
         self.liveness_properties.append(liveness_property)
 
     def check_safety_properties(self, model: IoltsMachine) -> Union[tuple[bool, tuple, str], tuple[bool, None, None]]:
         mcrl2 = Mcrl2Interface(model, self.sul)
 
-        # results = [mcrl2.holds(property) for property in self.safety_properties]
-
-        for property in self.safety_properties:
-            is_satisfied, cex = mcrl2.holds(property)
+        for prop in self.safety_properties:
+            is_satisfied, cex = mcrl2.holds(prop)
             if not is_satisfied:
-                return False, cex, property
+                return False, cex, prop
 
         return True, None, None
 
     def check_liveness_properties(self, model: IoltsMachine) -> Union[tuple[bool, tuple, str], tuple[bool, None, None]]:
         mcrl2 = Mcrl2Interface(model, self.sul)
 
-        for property in self.liveness_properties:
-            is_satisfied, cex = mcrl2.holds(property)
+        for prop in self.liveness_properties:
+            is_satisfied, cex = mcrl2.holds(prop)
             if not is_satisfied:
-                return False, cex, property
+                return False, cex, prop
 
         return True, None, None
 
@@ -57,17 +56,18 @@ class Mcrl2Converter:
         self.sul = sul
 
     def _act(self) -> str:
-        # Note add a convert function to the get_alphabet function
         safe_input = list(map(lambda input: input.replace('?', 'in_'), self.sul.iolts.get_input_alphabet()))
-        safe_output = list(map(lambda output: output.replace('!', 'out_'), self.sul.iolts.get_output_alphabet())) + [QUIESCENCE]
+        safe_output = list(map(lambda output: output.replace('!', 'out_'), self.sul.iolts.get_output_alphabet())) + [
+            QUIESCENCE]
 
-        return f"act{os.linesep}{', '.join(safe_input)},{os.linesep}{', '.join(safe_output )};{os.linesep}"
+        return f"act{os.linesep}{', '.join(safe_input)},{os.linesep}{', '.join(safe_output)};{os.linesep}"
 
     def _proc(self) -> str:
         processes = [self._convert_to_process(state) for state in self.model.states]
         return f"proc{os.linesep}{''.join(processes)}"
 
-    def _convert_to_process(self, state: IoltsState) -> str:
+    @staticmethod
+    def _convert_to_process(state: IoltsState) -> str:
         transitions: list[str] = list()
 
         for letter, destination in state.get_inputs():
@@ -93,13 +93,13 @@ class Mcrl2Interface:
     def __init__(self, model: IoltsMachine, sul):
         self.model_as_mcrl2 = Mcrl2Converter(model, sul).convert()
 
-    def holds(self, property: str) -> Union[tuple[bool, None], tuple[bool, tuple[str]]]:
-        name = Path(property).stem
+    def holds(self, prop: str) -> Union[tuple[bool, None], tuple[bool, tuple[str]]]:
+        name = Path(prop).stem
         folder = "tmp/"
 
         make_new_folder = f"mkdir -p {folder} && rm -r {folder} && mkdir {folder}"
         convert_to_lps = f"echo \"{self.model_as_mcrl2}\" | mcrl22lps > {folder}{name}.lps"
-        convert_to_pbes = f"lps2pbes -m -s -c --formula={property} {folder}{name}.lps {folder}{name}.pbes"
+        convert_to_pbes = f"lps2pbes -m -s -c --formula={prop} {folder}{name}.lps {folder}{name}.pbes"
         solve_pbes = f"pbessolve --search-strategy=breadth-first --solve-strategy=1 --file={folder}{name}.lps {folder}{name}.pbes"
         cex_to_lts = f"lps2lts {folder}{name}.pbes.evidence.lps {folder}{name}.pbes.evidence.lts"
         lts_to_dot = f"ltsconvert {folder}{name}.pbes.evidence.lts {folder}{name}.pbes.evidence.dot"
@@ -119,19 +119,14 @@ class Mcrl2Interface:
         if output == "true":
             return True, None
         else:
-            print(property)
+            print(prop)
             return False, self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
 
-    def get_counter_example(self, path: str) -> tuple[str]:
+    @staticmethod
+    def get_counter_example(path: str) -> list[str]:
         trace = list()
         visited = set()
         automaton: IoltsMachine = load_automaton_from_file(path, "iolts")
-        print(automaton)
-
-        # TODO
-        # add an cache of counter example to the Lstar.
-        # Change the unroll function so that it walks always until it saw all states.
-        # and then add a bonus suffix to the walk when the same counter example was already in the cache.
 
         while True:
             visited.add(automaton.initial_state)

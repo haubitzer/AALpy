@@ -1,1 +1,0 @@
-[true* . !in_unlock . out_acousticAlarm_OFF. out_opticalAlarm_OFF]<in_close . out_alarmArmed_ON> true
