@@ -434,4 +434,7 @@ class IoltsMachine(Automaton):
                 state.remove_quiescence(source)
                 state.add_quiescence(target)
 
+        if source == self.initial_state:
+            self.initial_state = target
+
         self.states.remove(source)

@@ -275,7 +275,15 @@ class IoltsMachineSUL(SUL):
 
         for prefix in reversed(all_prefixes(word)):
             in_cache, counter = self._cache_lookup(prefix)
-            if in_cache and not all(k is None for k in counter.keys()):
+            has_real_results = counter and not all(k is None for k in counter.keys())
+            if in_cache and has_real_results:
+                if prefix == word:
+                    return tuple(prefix), tuple()
+
+                if word[len(prefix)] in counter.keys():
+                    new_prefix = prefix + (word[len(prefix)],)
+                    return tuple(new_prefix), tuple(word[len(new_prefix):])
+
                 return tuple(prefix), tuple(word[len(prefix):])
 
         return tuple([]), tuple(word)

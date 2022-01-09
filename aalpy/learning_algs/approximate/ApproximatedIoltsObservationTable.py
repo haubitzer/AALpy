@@ -242,7 +242,7 @@ class ApproximatedIoltsObservationTable:
     def get_row_plus_key(self, s) -> tuple:
         return tuple(sorted(self.row_plus(s).items()))
 
-    def gen_hypothesis_minus(self) -> IoltsMachine:
+    def gen_hypothesis_minus(self, clean_up: bool = True) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
@@ -280,7 +280,7 @@ class ApproximatedIoltsObservationTable:
 
         return automaton
 
-    def gen_hypothesis_plus(self) -> IoltsMachine:
+    def gen_hypothesis_plus(self, clean_up: bool = True) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
@@ -316,7 +316,8 @@ class ApproximatedIoltsObservationTable:
                 output = output_tuple[0]
 
                 if not self.row(s)[EMPTY_WORD]:
-                    continue
+                    pass
+                    # continue
 
                 if output in self.row(s)[EMPTY_WORD]:
                     row = self.get_row_plus_key(s + output_tuple)
@@ -335,17 +336,18 @@ class ApproximatedIoltsObservationTable:
             list(states_dict.values()) + [chaos_quiescence_state, chaos_state],
         )
 
-        # Merges states together which are connected via quiescence transition
-        for state in automaton.states:
-            for _, destination in state.get_quiescence():
-                if state != destination and state != chaos_state:
-                    automaton.merge_into(state, destination)
+        if clean_up:
+            # Merges states together which are connected via quiescence transition
+            for state in automaton.states:
+                for _, destination in state.get_quiescence():
+                    if state != destination and state != chaos_state:
+                        automaton.merge_into(state, destination)
 
-        # Remove sink state
-        for sink_state in automaton.states:
-            if not sink_state.is_input_enabled() and sink_state.is_quiescence():
-                for state, letter in itertools.product(automaton.states, automaton.get_input_alphabet()):
-                    state.remove_input(letter, sink_state)
+            # Remove sink state
+            for sink_state in automaton.states:
+                if not sink_state.is_input_enabled() and sink_state.is_quiescence():
+                    for state, letter in itertools.product(automaton.states, automaton.get_input_alphabet()):
+                        state.remove_input(letter, sink_state)
 
         automaton.characterization_set = self.E
 

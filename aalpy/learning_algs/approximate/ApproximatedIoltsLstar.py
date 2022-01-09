@@ -8,7 +8,8 @@ from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
-from aalpy.utils.HelperFunctions import extend_set, print_learning_info, all_prefixes
+from aalpy.utils.HelperFunctions import extend_set, print_learning_info, all_prefixes, all_suffixes, \
+    print_observation_table
 
 
 def run_approximated_Iolts_Lstar(
@@ -19,7 +20,10 @@ def run_approximated_Iolts_Lstar(
 ):
     """ """
     learning_rounds = 0
-    cex_cache = Counter()
+    cex_cache_longest_prefix = Counter()
+    cex_cache_prefix= Counter()
+    cex_cache_suffix= Counter()
+
 
     # Initialize (S,E,T)
     observation_table = ApproximatedIoltsObservationTable(
@@ -65,25 +69,40 @@ def run_approximated_Iolts_Lstar(
 
         # print_observation_table(observation_table, "approximated")
 
-        # Construct H- and H+
-        h_minus = observation_table.gen_hypothesis_minus()
-        h_plus = observation_table.gen_hypothesis_plus()
+        # 1. Find counter example with ORIGINAL hypothesis
+        h_minus = observation_table.gen_hypothesis_minus(False)
+        h_plus = observation_table.gen_hypothesis_plus(False)
 
-        # Find counter example with precision oracle
-        cex = oracle.find_cex(h_minus, h_plus, observation_table)
-        if cex is not None:
-            if str(cex) in cex_cache.elements():
-                print(f"Added to S: {extend_set(observation_table.S, all_prefixes(cex[:-1]))}")
-            else:
-                cex_cache.update([str(cex)])
-                cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
-                print(f"Added to E: {extend_set(observation_table.E, cex_suffixes)}")
-            continue
+        all_counter_examples = oracle.find_cex(h_minus, h_plus, observation_table)
 
-        # Stop learning loop, hypotheses are good enough.
-        break
+        if all_counter_examples is None:
+            print("ORIGINAL hypothesis is valid")
+            break
+        else:
+            if resolve(all_counter_examples, observation_table,  cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
+                continue
 
-    # print_observation_table(observation_table, "approximated")
+        print("-------------------------------------")
+        # 2. Find counter example with CLEANED hypothesis
+        h_minus = observation_table.gen_hypothesis_minus(True)
+        h_plus = observation_table.gen_hypothesis_plus(True)
+        all_counter_examples = oracle.find_cex(h_minus, h_plus, observation_table)
+
+        if all_counter_examples is None:
+            print("CLEANED hypothesis is valid")
+            break
+        else:
+            if resolve(all_counter_examples, observation_table,  cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
+                continue
+
+        print(h_minus)
+        print(all_counter_examples)
+        print(f"Counter Examples via longest prefix: {cex_cache_longest_prefix}")
+        print(f"Counter Examples via prefix: {cex_cache_prefix}")
+        print(f"Counter Examples via suffix: {cex_cache_suffix}")
+        raise Exception("Error! no new counter example was found!")
+
+    print_observation_table(observation_table, "approximated")
 
     info = {
         'learning_rounds': learning_rounds,
@@ -101,6 +120,58 @@ def run_approximated_Iolts_Lstar(
         'characterization set': observation_table.E
     }
 
+    print(f"Counter Examples via longest prefix: {cex_cache_longest_prefix}")
+    print(f"Counter Examples via prefix: {cex_cache_prefix}")
+    print(f"Counter Examples via suffix: {cex_cache_suffix}")
+
     print_learning_info(info)
 
     return h_minus, h_plus
+
+
+def resolve(all_counter_examples: list, observation_table, cex_cache_longest_prefix: Counter, cex_cache_prefix, cex_cache_suffix) -> bool:
+    for cex in all_counter_examples:
+        if resolve_via_longest_prefix_processing(cex, observation_table, cex_cache_longest_prefix):
+            return True
+
+    for cex in all_counter_examples:
+        if resolve_via_all_prefixes(cex, observation_table, cex_cache_prefix):
+            return True
+
+    for cex in all_counter_examples:
+        if resolve_via_all_suffixes(cex, observation_table, cex_cache_suffix):
+            return True
+
+    return False
+
+
+def resolve_via_longest_prefix_processing(cex: list, observation_table, cex_cache):
+    added_elements = None
+    if cex_cache.get(str(cex)) is None:
+        cex_cache.update([str(cex)])
+        cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
+        added_elements = extend_set(observation_table.E, cex_suffixes)
+        print(f'[Case 1] Added to E: {added_elements}')
+
+    return bool(added_elements)
+
+
+def resolve_via_all_prefixes(cex: list, observation_table, cex_cache):
+    added_elements = None
+    if cex_cache.get(str(cex)) is None:
+        cex_cache.update([str(cex)])
+        added_elements = extend_set(observation_table.S, all_prefixes(cex))
+        print(f'[Case 2] Added to S: {added_elements}')
+
+    return bool(added_elements)
+
+
+def resolve_via_all_suffixes(cex: list, observation_table, cex_cache):
+    added_elements = None
+    if cex_cache.get(str(cex)) is None:
+        cex_cache.update([str(cex)])
+        added_elements = extend_set(observation_table.E, all_suffixes(cex))
+        print(f'[Case 3] Added to E: {added_elements}')
+
+    return bool(added_elements)
+
