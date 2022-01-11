@@ -97,6 +97,8 @@ def run_approximated_Iolts_Lstar(
         else:
             # print_observation_table(observation_table, "approximated")
 
+            print(h_plus_chaos)
+
             print(h_plus_without_chaos)
 
             print(f"Counter example WITH Chaos State: {all_cex_from_chaos}")
