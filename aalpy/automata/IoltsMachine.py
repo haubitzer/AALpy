@@ -138,6 +138,12 @@ class IoltsState(AutomatonState):
         self.quiescence.update({QUIESCENCE: tuple(new_value)})
         self.transitions.update(self.quiescence)
 
+    def clear(self):
+        self.inputs.clear()
+        self.outputs.clear()
+        self.quiescence.clear()
+        self.transitions.clear()
+
     def is_input_enabled(self) -> bool:
         """
         A state is input enabled if an input can trigger an transition.
@@ -174,7 +180,7 @@ class IoltsState(AutomatonState):
         """
         transitions = []
         for trans, states in self.transitions.items():
-            if self not in states:
+            if any(self != state for state in states):
                 transitions.append(trans)
         return transitions
 
@@ -240,8 +246,6 @@ class IoltsMachine(Automaton):
 
         if QUIESCENCE in same_state_trans:
             same_state_trans.remove(QUIESCENCE)
-        if QUIESCENCE in diff_state_trans:
-            diff_state_trans.remove(QUIESCENCE)
 
         trace = []
         visited = []
@@ -254,13 +258,12 @@ class IoltsMachine(Automaton):
 
         if diff_state_trans:
             old_current_state = self.current_state
-            letter = choice(diff_state_trans)
-            self.step_to(letter)
+            while old_current_state == self.current_state:
+                letter = choice(diff_state_trans)
+                self.step_to(letter)
+
             trace.append(letter)
             visited.append(self.current_state)
-
-            if old_current_state == self.current_state:
-                raise Exception("Different state transition was not successful")
 
         return trace, visited
 
@@ -321,7 +324,7 @@ class IoltsMachine(Automaton):
         for state in self.states:
             result.extend([input for input, _ in state.get_inputs()])
 
-        return list(set(result))
+        return sorted(list(set(result)))
 
     def get_output_alphabet(self) -> list:
         """
@@ -331,7 +334,7 @@ class IoltsMachine(Automaton):
         for state in self.states:
             result.extend([output for output, _ in state.get_outputs()])
 
-        return list(set(result))
+        return sorted(list(set(result)))
 
     def get_shortest_path(
             self, origin_state: AutomatonState, target_state: AutomatonState
@@ -438,3 +441,25 @@ class IoltsMachine(Automaton):
             self.initial_state = target
 
         self.states.remove(source)
+
+    def remove_not_connected_states(self):
+        for destination in self.states:
+            if destination == self.initial_state:
+                continue
+
+            is_connected = False
+            for state in self.states:
+                state: IoltsState
+                if destination == state:
+                    continue
+                if destination in [s for _, s in state.get_inputs()]:
+                    is_connected = True
+                if destination in [s for _, s in state.get_outputs()]:
+                    is_connected = True
+                if destination in [s for _, s in state.get_quiescence()]:
+                    is_connected = True
+
+            if not is_connected:
+                destination.clear()
+                self.states.remove(destination)
+                self.remove_not_connected_states()

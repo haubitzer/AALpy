@@ -290,7 +290,7 @@ def load_automaton_from_file(path, automaton_type, compute_prefixes=False):
                 elif label.startswith('!'):
                     source.add_output(label, destination)
                 elif label == QUIESCENCE:
-                    pass
+                    source.add_quiescence(destination)
                 else:
                     raise Exception("Unknown Prefix: " + str(label))
             else: # moore or dfa

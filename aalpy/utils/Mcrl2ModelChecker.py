@@ -1,7 +1,6 @@
 import os
-from typing import Union, Tuple, List
 from pathlib import Path
-from random import choices
+from typing import Union
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine, IoltsState, QUIESCENCE
@@ -22,7 +21,7 @@ class Mcrl2ModelChecker:
         assert os.path.isfile(safety_property), "Path is not a file"
         self.safety_properties.append((safety_property, suffixes))
 
-    def add_liveness_property(self, liveness_property: str,  suffixes: list[tuple]):
+    def add_liveness_property(self, liveness_property: str, suffixes: list[tuple]):
         assert os.path.isfile(liveness_property), "Path is not a file"
         self.liveness_properties.append((liveness_property, suffixes))
 
@@ -101,7 +100,7 @@ class Mcrl2Interface:
 
     def holds(self, prop: str) -> Union[tuple[bool, None], tuple[bool, list[str]]]:
         name = Path(prop).stem
-        folder = "tmp/"
+        folder = f"tmp/{name}/"
 
         make_new_folder = f"mkdir -p {folder} && rm -r {folder} && mkdir {folder}"
         convert_to_lps = f"echo \"{self.model_as_mcrl2}\" | mcrl22lps > {folder}{name}.lps"
@@ -127,6 +126,9 @@ class Mcrl2Interface:
         if output == "true":
             return True, None
         elif output == "false":
+            if not self.get_counter_example(f"{folder}{name}.pbes.evidence.dot"):
+                self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
+
             return False, self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
         else:
             raise Exception("Something went wrong in the mcrl2 part!")
@@ -137,7 +139,7 @@ class Mcrl2Interface:
         visited = set()
         automaton: IoltsMachine = load_automaton_from_file(path, "iolts")
 
-        # print(automaton)
+        print(automaton)
 
         while True:
             visited.add(automaton.initial_state)

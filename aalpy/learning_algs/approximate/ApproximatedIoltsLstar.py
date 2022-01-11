@@ -4,7 +4,6 @@ from aalpy.SULs import IoltsMachineSUL
 from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
     ApproximatedIoltsObservationTable,
 )
-
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
@@ -20,10 +19,10 @@ def run_approximated_Iolts_Lstar(
 ):
     """ """
     learning_rounds = 0
-    cex_cache_longest_prefix = Counter()
-    cex_cache_prefix= Counter()
-    cex_cache_suffix= Counter()
 
+    cex_cache_longest_prefix = Counter()
+    cex_cache_prefix = Counter()
+    cex_cache_suffix = Counter()
 
     # Initialize (S,E,T)
     observation_table = ApproximatedIoltsObservationTable(
@@ -45,7 +44,12 @@ def run_approximated_Iolts_Lstar(
             is_closed = False
             is_consistent = False
 
+            stabilizing_rounds = 0
             while not (is_closed and is_consistent):
+                stabilizing_rounds += 1
+                if not (stabilizing_rounds < 100):
+                    raise Exception("Stabilizing round hit 100")
+
                 is_closed, s_set_causes = observation_table.is_globally_closed()
                 if not is_closed:
                     print("Closed S set: " + str(extend_set(observation_table.S, s_set_causes)))
@@ -70,37 +74,39 @@ def run_approximated_Iolts_Lstar(
         # print_observation_table(observation_table, "approximated")
 
         # 1. Find counter example with ORIGINAL hypothesis
-        h_minus = observation_table.gen_hypothesis_minus(False)
-        h_plus = observation_table.gen_hypothesis_plus(False)
+        h_minus = observation_table.gen_hypothesis_minus()
+        h_plus_chaos = observation_table.gen_hypothesis_plus(True)
+        h_plus_without_chaos = observation_table.gen_hypothesis_plus(False)
 
-        all_counter_examples = oracle.find_cex(h_minus, h_plus, observation_table)
+        all_cex_from_chaos = oracle.find_cex(h_minus, h_plus_chaos, observation_table)
+        all_cex_from_without_chaos = oracle.find_cex(h_minus, h_plus_without_chaos, observation_table)
 
-        if all_counter_examples is None:
-            print("ORIGINAL hypothesis is valid")
+        if not all_cex_from_chaos:
+            h_plus = h_plus_chaos
             break
-        else:
-            if resolve(all_counter_examples, observation_table,  cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
-                continue
 
-        print("-------------------------------------")
-        # 2. Find counter example with CLEANED hypothesis
-        h_minus = observation_table.gen_hypothesis_minus(True)
-        h_plus = observation_table.gen_hypothesis_plus(True)
-        all_counter_examples = oracle.find_cex(h_minus, h_plus, observation_table)
-
-        if all_counter_examples is None:
-            print("CLEANED hypothesis is valid")
+        if not all_cex_from_without_chaos:
+            h_plus = h_plus_without_chaos
             break
-        else:
-            if resolve(all_counter_examples, observation_table,  cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
-                continue
 
-        print(h_minus)
-        print(all_counter_examples)
-        print(f"Counter Examples via longest prefix: {cex_cache_longest_prefix}")
-        print(f"Counter Examples via prefix: {cex_cache_prefix}")
-        print(f"Counter Examples via suffix: {cex_cache_suffix}")
-        raise Exception("Error! no new counter example was found!")
+        all_counter_examples = [list(x) for x in set(tuple(x) for x in all_cex_from_chaos + all_cex_from_without_chaos)]
+
+        if resolve(all_counter_examples, observation_table, cex_cache_longest_prefix, cex_cache_prefix,
+                   cex_cache_suffix):
+            continue
+        else:
+            # print_observation_table(observation_table, "approximated")
+
+            print(h_plus_without_chaos)
+
+            print(f"Counter example WITH Chaos State: {all_cex_from_chaos}")
+
+            print(f"Counter example Chaos State: {all_cex_from_without_chaos}")
+
+            if is_reducible and not added_e_set:
+                print(f"Last failed Quiescence reduce set: {e_set_reducible}")
+
+            raise Exception("Error! no new counter example was found that would improve the observation table!")
 
     print_observation_table(observation_table, "approximated")
 
@@ -120,16 +126,13 @@ def run_approximated_Iolts_Lstar(
         'characterization set': observation_table.E
     }
 
-    print(f"Counter Examples via longest prefix: {cex_cache_longest_prefix}")
-    print(f"Counter Examples via prefix: {cex_cache_prefix}")
-    print(f"Counter Examples via suffix: {cex_cache_suffix}")
-
     print_learning_info(info)
 
     return h_minus, h_plus
 
 
-def resolve(all_counter_examples: list, observation_table, cex_cache_longest_prefix: Counter, cex_cache_prefix, cex_cache_suffix) -> bool:
+def resolve(all_counter_examples: list, observation_table, cex_cache_longest_prefix: Counter, cex_cache_prefix,
+            cex_cache_suffix) -> bool:
     for cex in all_counter_examples:
         if resolve_via_longest_prefix_processing(cex, observation_table, cex_cache_longest_prefix):
             return True
@@ -174,4 +177,3 @@ def resolve_via_all_suffixes(cex: list, observation_table, cex_cache):
         print(f'[Case 3] Added to E: {added_elements}')
 
     return bool(added_elements)
-

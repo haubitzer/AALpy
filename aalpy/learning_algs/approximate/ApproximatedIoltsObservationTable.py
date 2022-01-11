@@ -1,5 +1,5 @@
 import itertools
-from collections import defaultdict, Counter
+from collections import defaultdict
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsState, IoltsMachine, QUIESCENCE
@@ -203,7 +203,7 @@ class ApproximatedIoltsObservationTable:
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
                 # update every via the cache
-                self.T[s][e].update(self.sul.receive_cache(s + e))
+                self.T[s][e].update(filter(None, self.sul.receive_cache(s + e)))
                 continue
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
@@ -242,7 +242,7 @@ class ApproximatedIoltsObservationTable:
     def get_row_plus_key(self, s) -> tuple:
         return tuple(sorted(self.row_plus(s).items()))
 
-    def gen_hypothesis_minus(self, clean_up: bool = True) -> IoltsMachine:
+    def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
@@ -278,15 +278,17 @@ class ApproximatedIoltsObservationTable:
             initial_state, list(states_dict.values()) + [chaos_quiescence_state]
         )
 
+        automaton.remove_not_connected_states()
+
         return automaton
 
-    def gen_hypothesis_plus(self, clean_up: bool = True) -> IoltsMachine:
+    def gen_hypothesis_plus(self, with_chaos_state: bool = True) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
 
-        chaos_state = IoltsState("X")
-        chaos_quiescence_state = IoltsState("Xq")
+        chaos_state = IoltsState("Chaos")
+        chaos_quiescence_state = IoltsState("ChaosQuiescence")
 
         for output in self.A_output:
             chaos_state.add_output(output[0], chaos_state)
@@ -317,7 +319,6 @@ class ApproximatedIoltsObservationTable:
 
                 if not self.row(s)[EMPTY_WORD]:
                     pass
-                    # continue
 
                 if output in self.row(s)[EMPTY_WORD]:
                     row = self.get_row_plus_key(s + output_tuple)
@@ -325,7 +326,7 @@ class ApproximatedIoltsObservationTable:
                         state.add_quiescence(state_distinguish.get(row))
                     else:
                         state.add_output(output, state_distinguish.get(row))
-                elif not self.row_plus(s)[EMPTY_WORD][1]:
+                elif not self.row_plus(s)[EMPTY_WORD][1] and with_chaos_state:
                     if output_tuple == QUIESCENCE_TUPLE:
                         state.add_quiescence(chaos_quiescence_state)
                     else:
@@ -336,19 +337,12 @@ class ApproximatedIoltsObservationTable:
             list(states_dict.values()) + [chaos_quiescence_state, chaos_state],
         )
 
-        if clean_up:
-            # Merges states together which are connected via quiescence transition
+        if not with_chaos_state:
             for state in automaton.states:
                 for _, destination in state.get_quiescence():
                     if state != destination and state != chaos_state:
                         automaton.merge_into(state, destination)
 
-            # Remove sink state
-            for sink_state in automaton.states:
-                if not sink_state.is_input_enabled() and sink_state.is_quiescence():
-                    for state, letter in itertools.product(automaton.states, automaton.get_input_alphabet()):
-                        state.remove_input(letter, sink_state)
-
-        automaton.characterization_set = self.E
+        automaton.remove_not_connected_states()
 
         return automaton
