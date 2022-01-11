@@ -337,12 +337,13 @@ class ApproximatedIoltsObservationTable:
             list(states_dict.values()) + [chaos_quiescence_state, chaos_state],
         )
 
-        if not with_chaos_state:
-            for state in automaton.states:
-                for _, destination in state.get_quiescence():
-                    if state != destination and state != chaos_state:
-                        automaton.merge_into(state, destination)
-
         automaton.remove_not_connected_states()
+
+        # TODO find a good solution to merge to states.
+        #if not with_chaos_state:
+        #    for state in reversed(automaton.states):
+        #        for _, destination in state.get_quiescence():
+        #            if state != destination and state != chaos_state:
+        #                automaton.merge_into(state, destination)
 
         return automaton
