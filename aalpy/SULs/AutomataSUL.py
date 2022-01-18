@@ -212,7 +212,7 @@ class IoltsMachineSUL(SUL):
             self.num_cached_queries += 1
             return choice(list(counter.elements()))
 
-        if in_cache and all(k is None for k in counter.keys()):
+        if in_cache and with_cache and all(k is None for k in counter.keys()):
             return None
 
         output = self._query_with_step(word)
