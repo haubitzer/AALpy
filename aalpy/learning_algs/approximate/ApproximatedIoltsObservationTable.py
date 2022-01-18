@@ -82,8 +82,8 @@ class ApproximatedIoltsObservationTable:
         # assert self.row_is_defined(s)
 
         result = defaultdict(tuple)
-        for (key, t), (_, c) in zip(self.T[s].items(), self.T_completed[s].items()):
-            result[key] = (frozenset(t), c)
+        for (e, t) in self.T[s].items():
+            result[e] = (frozenset(t), self.T_completed[s][e])
 
         return result
 
@@ -203,7 +203,7 @@ class ApproximatedIoltsObservationTable:
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
                 # update every via the cache
-                self.T[s][e].update(filter(None, self.sul.receive_cache(s + e)))
+                self.T[s][e].update(self.sul.receive_cache(s + e))
                 continue
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
@@ -232,9 +232,18 @@ class ApproximatedIoltsObservationTable:
             self.T[s][e].update(self.sul.receive_cache(s + e))
             self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
 
-        # Sorts the set of T(s,e) to be deterministic
+
+        # TODO make the observation table derterministic:
+        # * no Nones
+        # * sort keys of T
+        # * sort keys of T_completed
+        # * sort values of T
         for s, e in itertools.product(update_S, update_E):
+            self.T[s][e] = set(filter(None, self.T[s][e]))
             self.T[s].update(dict(sorted(self.T[s].items())))
+            self.T_completed[s].update(dict(sorted(self.T_completed[s].items())))
+
+
 
     def get_row_key(self, s) -> tuple:
         return tuple(sorted(self.row(s).items()))
