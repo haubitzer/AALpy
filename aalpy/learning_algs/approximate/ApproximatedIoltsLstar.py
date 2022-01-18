@@ -95,7 +95,7 @@ def run_approximated_Iolts_Lstar(
                    cex_cache_suffix):
             continue
         else:
-            # print_observation_table(observation_table, "approximated")
+            print_observation_table(observation_table, "approximated")
 
             print(h_plus_chaos)
 

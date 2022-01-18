@@ -1,3 +1,5 @@
+import random
+
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine
 from aalpy.learning_algs.approximate.ApproximatedIoltsLstar import run_approximated_Iolts_Lstar
@@ -6,12 +8,14 @@ from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_client/00_client.dot", "iolts")
 
+# random.seed(2)
+
 print(specification)
 
 sul = IoltsMachineSUL(specification, 0.9, 0.9)
 
 checker = Mcrl2ModelChecker(sul)
-checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',)])
+checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',),('!DATA',)])
 checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_1.mcf", [])
 checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
 checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_3.mcf", [])
