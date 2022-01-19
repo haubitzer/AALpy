@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsState, IoltsMachine, QUIESCENCE
+from aalpy.utils.HelperFunctions import all_prefixes
 
 EMPTY_WORD = tuple()
 QUIESCENCE_TUPLE = tuple([QUIESCENCE])
@@ -200,9 +201,15 @@ class ApproximatedIoltsObservationTable:
 
         for s, e in itertools.product(update_S, update_E):
 
+            if not all(self.row_is_defined(prefix) for prefix in all_prefixes(s + e)):
+                continue
+
+            if self.T[s][e] < self.sul.receive_cache(s + e):
+                self.T[s][e].update(self.sul.receive_cache(s + e))
+                continue
+
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
-                # update every via the cache
                 self.T[s][e].update(self.sul.receive_cache(s + e))
                 continue
 

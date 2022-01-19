@@ -1,2 +1,1 @@
 [true* . in_GET . out_DATA . true* . out_DATA . true* . out_DATA . true* . out_DATA] false
-% [true* . in_GET]<out_DATA . in_ACK><out_DATA . in_ACK><out_DATA . in_ACK> true

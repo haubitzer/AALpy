@@ -212,7 +212,7 @@ class IoltsMachineSUL(SUL):
             self.num_cached_queries += 1
             return choice(list(counter.elements()))
 
-        if in_cache and with_cache and all(k is None for k in counter.keys()):
+        if in_cache and all(k is None for k in counter.keys()):
             return None
 
         output = self._query_with_step(word)
@@ -361,7 +361,7 @@ class IoltsMachineSUL(SUL):
         saved_num_listens = self.num_listens
         is_complete = True
 
-        while self.calculate_all_seen_probability(word) < self.query_certainty_probability:
+        while self.calculate_all_seen_probability(word) < self.completeness_certainty_probability:
             output = self.query(word, False)
             if output not in observed_set:
                 is_complete = False
