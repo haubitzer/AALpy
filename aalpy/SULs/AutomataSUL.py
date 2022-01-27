@@ -220,12 +220,12 @@ class IoltsMachineSUL(SUL):
 
         return output
 
-    def receive_cache(self, word) -> set:
+    def get_cache_elements(self, word) -> set:
         in_cache, counter = self._cache_lookup(word)
         if not in_cache:
             return set()
 
-        return set(counter.elements())
+        return set(sorted(list(set(counter.elements()))))
 
     def _cache_update(self, word, output):
         if word not in self.cache.keys():

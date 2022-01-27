@@ -20,13 +20,17 @@ class IoltsState(AutomatonState):
         self.quiescence = defaultdict(tuple)
         self.add_quiescence(None)
 
+
+    def __lt__(self, other):
+        return self.state_id < other.state_id
+
     def get_inputs(
             self, input: string = None, destination: IoltsState = None
     ) -> list[tuple[str, IoltsState]]:
         assert input is None or input.startswith("?")
 
         result = [
-            (input, state) for input, states in self.inputs.items() for state in states
+            (input, state) for input, states in sorted(self.inputs.items()) for state in sorted(states)
         ]
         result = (
             result
@@ -39,7 +43,7 @@ class IoltsState(AutomatonState):
             else list(filter(lambda elm: elm[1] == destination, result))
         )
 
-        return result
+        return sorted(result)
 
     def get_outputs(
             self, output: string = None, destination: IoltsState = None
@@ -48,8 +52,8 @@ class IoltsState(AutomatonState):
 
         result = [
             (output, state)
-            for output, states in self.outputs.items()
-            for state in states
+            for output, states in sorted(self.outputs.items())
+            for state in sorted(states)
         ]
         result = (
             result
@@ -62,7 +66,7 @@ class IoltsState(AutomatonState):
             else list(filter(lambda elm: elm[1] == destination, result))
         )
 
-        return result
+        return sorted(result)
 
     def get_quiescence(self, destination: IoltsState = None) -> list[tuple[str, IoltsState]]:
 
@@ -78,7 +82,7 @@ class IoltsState(AutomatonState):
             else list(filter(lambda elm: elm[1] == destination, result))
         )
 
-        return result
+        return sorted(result)
 
     def add_input(self, input: string, new_state: IoltsState):
         assert input.startswith("?")
@@ -336,6 +340,9 @@ class IoltsMachine(Automaton):
 
         return sorted(list(set(result)))
 
+    def get_alphabet(self):
+        return self.get_input_alphabet() + self.get_output_alphabet() + [QUIESCENCE]
+
     def get_shortest_path(
             self, origin_state: AutomatonState, target_state: AutomatonState
     ) -> tuple:
@@ -463,3 +470,15 @@ class IoltsMachine(Automaton):
                 destination.clear()
                 self.states.remove(destination)
                 self.remove_not_connected_states()
+
+    def remove_state(self, state_to_remove):
+        for state, letter in itertools.product(self.states, self.get_input_alphabet()):
+            state.remove_input(letter,  state_to_remove)
+
+        for state, letter in itertools.product(self.states, self.get_output_alphabet()):
+            state.remove_output(letter,  state_to_remove)
+
+        for state in self.states:
+            state.remove_quiescence(state_to_remove)
+
+        self.remove_not_connected_states()

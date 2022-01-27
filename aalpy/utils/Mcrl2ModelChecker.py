@@ -1,4 +1,6 @@
 import os
+import subprocess
+import time
 from pathlib import Path
 from typing import Union
 
@@ -84,7 +86,10 @@ class Mcrl2Converter:
         for letter, destination in state.get_quiescence():
             transitions.append(f"{letter} . {destination.state_id}")
 
-        return f"{state.state_id} = {' + '.join(transitions)}; {os.linesep}"
+        if transitions:
+            return f"{state.state_id} = {' + '.join(transitions)}; {os.linesep}"
+        else:
+            return ""
 
     def _init(self) -> str:
         return f"init{os.linesep} {self.model.initial_state.state_id};{os.linesep}"
@@ -100,7 +105,7 @@ class Mcrl2Interface:
 
     def holds(self, prop: str) -> Union[tuple[bool, None], tuple[bool, list[str]]]:
         name = Path(prop).stem
-        folder = f"tmp/{name}/"
+        folder = f"tmp/{name}_{time.time()}/"
 
         make_new_folder = f"mkdir -p {folder} && rm -r {folder} && mkdir {folder}"
         convert_to_lps = f"echo \"{self.model_as_mcrl2}\" | mcrl22lps > {folder}{name}.lps"
@@ -118,19 +123,25 @@ class Mcrl2Interface:
         remove_empty_label = f"sed -i 's/ \[label=\"()\"\];/;/g' {folder}{name}.pbes.evidence.dot"
         remove_old_start_node = f"sed -i 's/node \[ width=0.25, height=0.25, label=\"\" \];//g' {folder}{name}.pbes.evidence.dot"
 
-        output = os.popen(
-            f"{make_new_folder} && {convert_to_lps} && {convert_to_pbes} && {solve_pbes} && {cex_to_lts} && {lts_to_dot} && {replace_in} && {replace_out} && {add_start0} && {remove_empty_label} && {remove_old_start_node}").read().rstrip()
+        cmd = f"{make_new_folder} && {convert_to_lps} && {convert_to_pbes} && {solve_pbes} && {cex_to_lts} && {lts_to_dot} && {replace_in} && {replace_out} && {add_start0} && {remove_empty_label} && {remove_old_start_node}"
 
-        # print(self.model_as_mcrl2)
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
 
-        if output == "true":
+        result = stdout.decode("utf-8").rstrip()
+
+        if result == "true":
             return True, None
-        elif output == "false":
+        elif result == "false":
             if not self.get_counter_example(f"{folder}{name}.pbes.evidence.dot"):
                 self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
 
             return False, self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
         else:
+
+            print(cmd)
+            print(stderr)
+            print(stdout)
             raise Exception("Something went wrong in the mcrl2 part!")
 
     @staticmethod
@@ -138,8 +149,6 @@ class Mcrl2Interface:
         trace = list()
         visited = set()
         automaton: IoltsMachine = load_automaton_from_file(path, "iolts")
-
-        print(automaton)
 
         while True:
             visited.add(automaton.initial_state)

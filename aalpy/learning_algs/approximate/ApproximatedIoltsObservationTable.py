@@ -1,5 +1,6 @@
 import itertools
-from collections import defaultdict
+from collections import defaultdict, Counter
+from sortedcontainers import SortedSet, SortedList, SortedDict
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsState, IoltsMachine, QUIESCENCE
@@ -35,10 +36,10 @@ class ApproximatedIoltsObservationTable:
         self.S.append(EMPTY_WORD)
         self.E.append(EMPTY_WORD)
 
-    def row_is_defined(self, s: tuple, prefix=None):
-        if prefix:
-            s = s + prefix
+    def is_defined(self, word):
+        return all(self._prefix_is_defined(prefix) for prefix in all_prefixes(word))
 
+    def _prefix_is_defined(self, s: tuple):
         if s == EMPTY_WORD:
             return True
         elif len(s) == 1:
@@ -61,73 +62,62 @@ class ApproximatedIoltsObservationTable:
         next_is_quiescence = next == QUIESCENCE
         next_in_T = next in self.row(s[:-1])[EMPTY_WORD]
 
-        valid_input = (
-                              prev_is_output or prev_is_quiescence or quiescence_in_T
-                      ) and next_is_input
+        valid_input = (prev_is_output or prev_is_quiescence or quiescence_in_T) and next_is_input
         valid_output = (prev_is_input or prev_is_output) and next_is_output and next_in_T
-        valid_quiescence = (
-                quiescence_in_T and not prev_is_quiescence and next_is_quiescence
-        )
+        valid_quiescence = (quiescence_in_T and not prev_is_quiescence and next_is_quiescence)
 
         return valid_input or valid_output or valid_quiescence
 
     def row(self, s):
-        # assert self.row_is_defined(s)
-        result = defaultdict(frozenset)
-        for (key, t) in self.T[s].items():
-            result[key] = frozenset(t)
+        result = SortedDict(SortedSet)
+        for e in self.E:
+            result[e] = SortedSet(self.T[s][e])
 
         return result
 
     def row_plus(self, s):
-        # assert self.row_is_defined(s)
-
-        result = defaultdict(tuple)
-        for (e, t) in self.T[s].items():
-            result[e] = (frozenset(t), self.T_completed[s][e])
+        result = SortedDict(tuple)
+        for e in self.E:
+            result[e] = (SortedSet(self.T[s][e]), self.T_completed[s][e])
 
         return result
 
     def is_globally_closed(self):
-        rows_to_close = []
+        rows_to_close = SortedList()
 
         for s1, a in itertools.product(self.S, self.A):
-            if not self.row_is_defined(s1 + a):
+            if not self.is_defined(s1 + a):
                 continue
 
             if not any(self.row_plus(s1 + a) == self.row_plus(s2) for s2 in self.S):
-                rows_to_close.append(s1 + a)
-                return len(rows_to_close) == 0, list(set(rows_to_close))
+                rows_to_close.add(s1 + a)
+                break
 
-        return len(rows_to_close) == 0, list(set(rows_to_close))
+        if rows_to_close:
+            return False, [rows_to_close[0]]
+        else:
+            return True, []
 
     def is_globally_consistent(self):
-        causes_of_inconsistency = []
+        causes_of_inconsistency = SortedList()
 
         for s1, s2 in itertools.product(self.S, self.S):
             for a, e in itertools.product(self.A, self.E):
-                if not self.row_is_defined(s1 + a) or not self.row_is_defined(s2 + a):
+                if not self.is_defined(s1 + a) or not self.is_defined(s2 + a):
                     continue
 
-                if (
-                        self.row(s1) == self.row(s2)
-                        and self.row(s1 + a)[e] != self.row(s2 + a)[e]
-                ):
-                    causes_of_inconsistency.append(a + e)
-                    return len(causes_of_inconsistency) == 0, list(
-                        set(causes_of_inconsistency)
-                    )
+                if self.row(s1) == self.row(s2) and self.row(s1 + a)[e] != self.row(s2 + a)[e]:
+                    causes_of_inconsistency.add(a + e)
+                    break
 
-                if (
-                        self.row_plus(s1) == self.row_plus(s2)
-                        and self.row_plus(s1 + a)[e] != self.row_plus(s2 + a)[e]
-                ):
-                    causes_of_inconsistency.append(a + e)
-                    return len(causes_of_inconsistency) == 0, list(
-                        set(causes_of_inconsistency)
-                    )
+                if self.row_plus(s1) == self.row_plus(s2) and self.row_plus(s1 + a)[e] != self.row_plus(s2 + a)[e]:
+                    causes_of_inconsistency.add(a + e)
+                    break
 
-        return len(causes_of_inconsistency) == 0, list(set(causes_of_inconsistency))
+        if causes_of_inconsistency:
+            return False, [causes_of_inconsistency[0]]
+        else:
+            return True, []
 
     def is_quiescence_reducible(self) -> tuple[bool, list]:
         for s1, s2 in itertools.product(self.S, self.S):
@@ -201,16 +191,16 @@ class ApproximatedIoltsObservationTable:
 
         for s, e in itertools.product(update_S, update_E):
 
-            if not all(self.row_is_defined(prefix) for prefix in all_prefixes(s + e)):
+            if not self.is_defined(s + e):
                 continue
 
-            if self.T[s][e] < self.sul.receive_cache(s + e):
-                self.T[s][e].update(self.sul.receive_cache(s + e))
+            if self.T[s][e] < self.sul.get_cache_elements(s + e):
+                self.T[s][e].update(self.sul.get_cache_elements(s + e))
                 continue
 
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
-                self.T[s][e].update(self.sul.receive_cache(s + e))
+                self.T[s][e].update(self.sul.get_cache_elements(s + e))
                 continue
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
@@ -236,7 +226,7 @@ class ApproximatedIoltsObservationTable:
             if output is None:
                 continue
 
-            self.T[s][e].update(self.sul.receive_cache(s + e))
+            self.T[s][e].update(self.sul.get_cache_elements(s + e))
             self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
 
 
@@ -245,18 +235,19 @@ class ApproximatedIoltsObservationTable:
         # * sort keys of T
         # * sort keys of T_completed
         # * sort values of T
+        # TODO use sorted set here
+        # TODO use sorted dict here
         for s, e in itertools.product(update_S, update_E):
             self.T[s][e] = set(filter(None, self.T[s][e]))
             self.T[s].update(dict(sorted(self.T[s].items())))
             self.T_completed[s].update(dict(sorted(self.T_completed[s].items())))
 
 
+    def get_row_key(self, s) -> str:
+        return str(sorted(self.row(s).items()))
 
-    def get_row_key(self, s) -> tuple:
-        return tuple(sorted(self.row(s).items()))
-
-    def get_row_plus_key(self, s) -> tuple:
-        return tuple(sorted(self.row_plus(s).items()))
+    def get_row_plus_key(self, s) -> str:
+        return str(sorted(self.row_plus(s).items()))
 
     def gen_hypothesis_minus(self) -> IoltsMachine:
         state_distinguish = dict()
@@ -355,11 +346,22 @@ class ApproximatedIoltsObservationTable:
 
         automaton.remove_not_connected_states()
 
-        # TODO find a good solution to merge to states.
-        #if not with_chaos_state:
-        #    for state in reversed(automaton.states):
-        #        for _, destination in state.get_quiescence():
-        #            if state != destination and state != chaos_state:
-        #                automaton.merge_into(state, destination)
+        return automaton
+
+    def gen_hypothesis_star(self) -> IoltsMachine:
+        automaton = self.gen_hypothesis_plus(False)
+
+        states_to_remove = Counter()
+
+        for (trace, elements) in self.sul.cache.items():
+            if all(out is None for out in elements):
+                automaton.reset_to_initial()
+                for letter in trace:
+                    automaton.step_to(letter)
+
+                states_to_remove.update([automaton.current_state.state_id])
+
+        for (state_id, _) in states_to_remove.items():
+            automaton.remove_state(automaton.get_state_by_id(state_id))
 
         return automaton

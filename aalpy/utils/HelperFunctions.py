@@ -98,13 +98,39 @@ def print_learning_info(info: dict):
     if 'cache_saved' in info.keys():
         print(' # MQ Saved by Caching : {}'.format(info['cache_saved']))
     print(' # Steps               : {}'.format(info['steps_learning']))
-    if 'listens_leaning' in info.keys():
-        print(' # Listens             : {}'.format(info['listens_leaning']))
     print('Equivalence Query')
     print(' # Membership Queries  : {}'.format(info['queries_eq_oracle']))
     print(' # Steps               : {}'.format(info['steps_eq_oracle']))
-    if 'listens_eq_oracle' in info.keys():
-        print(' # Listens             : {}'.format(info['listens_eq_oracle']))
+    print('-----------------------------------')
+
+
+def print_learning_info_approximate_lstar(info: dict):
+    """
+    Print learning statistics.
+    """
+    print('-----------------------------------')
+    print('Learning Finished.')
+    print('Learning Rounds          : {}'.format(info['learning_rounds']))
+    print('Number of states H-      : {}'.format(info['automaton_size_h_minus']))
+    print('Number of states H+      : {}'.format(info['automaton_size_h_plus']))
+    print('Number of states H*      : {}'.format(info['automaton_size_h_star']))
+    print('S size                   : {}'.format(info['s_size']))
+    print('E size                   : {}'.format(info['e_size']))
+    print('Cache size               : {}'.format(info['cache_size']))
+    print('Time (in seconds)')
+    print('  Total                  : {}'.format(info['total_time']))
+    print('  Learning algorithm     : {}'.format(info['learning_time']))
+    print('  Conformance checking   : {}'.format(info['checking_time']))
+    print('Learning Algorithm')
+    print(' # Membership Queries    : {}'.format(info['queries_learning']))
+    print(' # Steps                 : {}'.format(info['steps_learning']))
+    print(' # Listens               : {}'.format(info['listens_leaning']))
+    print(' # Certainty probability : {}'.format(info['query_certainty_probability']))
+    print('Completeness Query')
+    print(' # Completeness Queries  : {}'.format(info['queries_completeness']))
+    print(' # Steps                 : {}'.format(info['steps_completeness']))
+    print(' # Listens               : {}'.format(info['listens_completeness']))
+    print(' # Certainty probability : {}'.format(info['completeness_certainty_probability']))
     print('-----------------------------------')
 
 
