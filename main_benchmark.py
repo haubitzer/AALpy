@@ -9,7 +9,7 @@ from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 
 def get_sul():
-    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/00_car_alarm.dot", "iolts")
+    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/02_car_alarm.dot", "iolts")
     return IoltsMachineSUL(specification, 0.9, 0.9)
 
 

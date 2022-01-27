@@ -59,29 +59,8 @@ def run_approximated_Iolts_Lstar(
                 print(".", end='')
                 stabilizing_rounds += 1
                 if not (stabilizing_rounds < 40):
-                    print_observation_table(observation_table, "approximated")
+                    # print_observation_table(observation_table, "approximated")
                     raise Exception("Dead lock")
-                    if print_level > 1:
-                        print("Restarted learning because of dead lock")
-                    random.seed(time.time())
-
-                    cex_cache_longest_prefix = Counter()
-                    cex_cache_prefix = Counter()
-                    cex_cache_suffix = Counter()
-
-                    observation_table = ApproximatedIoltsObservationTable(
-                        input_alphabet, output_alphabet, sul
-                    )
-
-                    observation_table.update_obs_table()
-                    is_closed = False
-                    is_consistent = False
-
-                    # We need to that because of h*
-                    sul.cache.clear()
-
-                    stabilizing_rounds = 0
-                    continue
 
                 is_closed, s_set_causes = observation_table.is_globally_closed()
                 if not is_closed:
@@ -127,26 +106,12 @@ def run_approximated_Iolts_Lstar(
         all_counter_examples = [list(x) for x in
                                 set(tuple(x) for x in all_cex_from_minus_and_plus + all_cex_from_minus_and_star)]
 
-        if resolve(all_counter_examples, observation_table, cex_cache_longest_prefix, cex_cache_prefix,
-                   cex_cache_suffix):
+        if resolve(all_counter_examples, observation_table, cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
             continue
         else:
-            print_observation_table(observation_table, "approximated")
-
-            print(h_plus)
-
-            print(h_star)
-
-            print(f"Counter example WITH Chaos State: {all_cex_from_minus_and_plus}")
-
-            print(f"Counter example Chaos State: {all_cex_from_minus_and_star}")
-
-            if is_reducible and not added_e_set:
-                print(f"Last failed Quiescence reduce set: {e_set_reducible}")
-
             raise Exception("Error! no new counter example was found that would improve the observation table!")
 
-    if print_level > 1:
+    if print_level > 3:
         print_observation_table(observation_table, "approximated")
 
     total_time = round(time.time() - start_time, 2)
@@ -204,7 +169,7 @@ def resolve_via_longest_prefix_processing(cex: list, observation_table, cex_cach
         cex_cache.update([str(cex)])
         cex_suffixes = longest_prefix_cex_processing(observation_table.S + list(observation_table.s_dot_a()), cex)
         added_elements = extend_set(observation_table.E, cex_suffixes)
-        # print(f'[Case 1] Added to E: {added_elements}')
+        print(f'[Case 1] Added to E: {added_elements}')
 
     return bool(added_elements)
 
@@ -214,7 +179,7 @@ def resolve_via_all_prefixes(cex: list, observation_table, cex_cache):
     if cex_cache.get(str(cex)) is None:
         cex_cache.update([str(cex)])
         added_elements = extend_set(observation_table.S, all_prefixes(cex))
-        # print(f'[Case 2] Added to S: {added_elements}')
+        print(f'[Case 2] Added to S: {added_elements}')
 
     return bool(added_elements)
 
@@ -224,6 +189,6 @@ def resolve_via_all_suffixes(cex: list, observation_table, cex_cache):
     if cex_cache.get(str(cex)) is None:
         cex_cache.update([str(cex)])
         added_elements = extend_set(observation_table.E, all_suffixes(cex))
-        # print(f'[Case 3] Added to E: {added_elements}')
+        print(f'[Case 3] Added to E: {added_elements}')
 
     return bool(added_elements)

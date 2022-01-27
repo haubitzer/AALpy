@@ -23,6 +23,8 @@ class ApproximatedIoltsObservationTable:
 
         self.sul = sul
 
+        self.cache_is_defined = set()
+
         self.A_input = [tuple([a]) for a in input_alphabet]
         self.A_output = [tuple([a]) for a in output_alphabet]
         self.A = self.A_input + self.A_output + [QUIESCENCE_TUPLE]
@@ -40,6 +42,9 @@ class ApproximatedIoltsObservationTable:
         return all(self._prefix_is_defined(prefix) for prefix in all_prefixes(word))
 
     def _prefix_is_defined(self, s: tuple):
+        if s in self.cache_is_defined:
+            return True
+
         if s == EMPTY_WORD:
             return True
         elif len(s) == 1:
@@ -66,7 +71,12 @@ class ApproximatedIoltsObservationTable:
         valid_output = (prev_is_input or prev_is_output) and next_is_output and next_in_T
         valid_quiescence = (quiescence_in_T and not prev_is_quiescence and next_is_quiescence)
 
-        return valid_input or valid_output or valid_quiescence
+        is_defined = valid_input or valid_output or valid_quiescence
+
+        if is_defined:
+            self.cache_is_defined.add(s)
+
+        return is_defined
 
     def row(self, s):
         result = SortedDict(SortedSet)
