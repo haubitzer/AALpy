@@ -1,6 +1,7 @@
 import random
 import time
 from collections import Counter
+from sortedcontainers import SortedSet
 
 
 from aalpy.SULs import IoltsMachineSUL
@@ -25,8 +26,9 @@ def run_approximated_Iolts_Lstar(
     """ """
     start_time = time.time()
     learning_time = 0
-
     learning_rounds = 0
+
+    h_minus, h_plus, h_star = None, None, None
 
     cex_cache_longest_prefix = Counter()
     cex_cache_prefix = Counter()
@@ -37,13 +39,19 @@ def run_approximated_Iolts_Lstar(
         input_alphabet, output_alphabet, sul
     )
 
+    force_stop = False
+
     while True:
         learning_start = time.time()
         learning_rounds += 1
+        print("-------------------------------------------------------------------------------------------------------")
         print(f"Learning round: {learning_rounds}")
         if not (learning_rounds < 25):
-            return None, None, None, None
-            # raise Exception("Leaning round hit 100")
+            raise Exception("Leaning round hit 100")
+
+        if h_star:
+            pass
+            # observation_table.trim(h_star)
 
         is_reducible = True
         while is_reducible:
@@ -58,36 +66,45 @@ def run_approximated_Iolts_Lstar(
             while not (is_closed and is_consistent):
                 print(".", end='')
                 stabilizing_rounds += 1
-                if not (stabilizing_rounds < 40):
-                    # print_observation_table(observation_table, "approximated")
+                if not (stabilizing_rounds < 100):
                     raise Exception("Dead lock")
 
-                is_closed, s_set_causes = observation_table.is_globally_closed()
+                is_closed, rows_to_close = observation_table.is_globally_closed()
                 if not is_closed:
-                    added_s_set = extend_set(observation_table.S, s_set_causes)
+                    added_s_set = extend_set(observation_table.S, rows_to_close)
                     if print_level > 1:
                         print("Closed S set: " + str(added_s_set))
                     observation_table.update_obs_table()
                     continue
 
-                is_consistent, e_set_causes = observation_table.is_globally_consistent()
+                is_consistent, e_for_consistency, cause = observation_table.is_globally_consistent()
                 if not is_consistent:
-                    added_e_set = extend_set(observation_table.E, e_set_causes)
+                    added_e_set = extend_set(observation_table.E, e_for_consistency)
+
+                    # TODO if nothing has changed we should update here via cache and reduce the observation table!
+                    if not added_e_set:
+                        raise Exception(f"[ERROR] Could not resolve inconsistent observation table! \n {cause}")
+
                     if print_level > 1:
-                        print("Consistent E set: " + str(added_e_set))
+                        print(f"Consistent E set: {added_e_set}")
+
                     observation_table.update_obs_table()
                     continue
 
+            if force_stop:
+                print("Force stop")
+                break
+
             print(f" Stabilizing rounds: {stabilizing_rounds}")
             # Check quiescence reducible
-            is_reducible, e_set_reducible = observation_table.is_quiescence_reducible()
+            is_reducible, e_set_reducible, cause = observation_table.is_quiescence_reducible()
             added_e_set = extend_set(observation_table.E, e_set_reducible)
             if added_e_set:
                 if print_level > 1:
-                    print(f"Found E by quiescence reducible: {added_e_set}")
+                    print(f"Found E by quiescence reducible: {added_e_set} \n {cause}")
             elif is_reducible and not added_e_set:
                 if print_level > 1:
-                    print(f"Quiescence reducible failed! {e_set_reducible}")
+                    print(f"Quiescence reducible failed! {e_set_reducible} \n {cause}")
                 break
 
         learning_time += time.time() - learning_start
@@ -97,14 +114,17 @@ def run_approximated_Iolts_Lstar(
         h_plus = observation_table.gen_hypothesis_plus(False)
         h_star = observation_table.gen_hypothesis_star()
 
-        all_cex_from_minus_and_plus = oracle.find_cex(h_minus, h_plus, observation_table)
-        all_cex_from_minus_and_star = oracle.find_cex(h_minus, h_star, observation_table)
+        # all_cex_from_minus_and_plus = oracle.find_cex(h_minus, h_plus, observation_table)
+        # all_cex_from_minus_and_star = oracle.find_cex(h_minus, h_star, observation_table)
 
-        if not all_cex_from_minus_and_plus or not all_cex_from_minus_and_star:
+
+
+        all_cex_from_minus_and_star = oracle.find_cex(h_star, h_star, observation_table)
+
+        if not all_cex_from_minus_and_star:
             break
 
-        all_counter_examples = [list(x) for x in
-                                set(tuple(x) for x in all_cex_from_minus_and_plus + all_cex_from_minus_and_star)]
+        all_counter_examples = sorted([list(unique_cex) for unique_cex in SortedSet(tuple(cex) for cex in all_cex_from_minus_and_star)])
 
         if resolve(all_counter_examples, observation_table, cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
             continue

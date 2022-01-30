@@ -1,10 +1,12 @@
 import itertools
 from collections import defaultdict, Counter
+from typing import Union, Tuple, List, Any
+
 from sortedcontainers import SortedSet, SortedList, SortedDict
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsState, IoltsMachine, QUIESCENCE
-from aalpy.utils.HelperFunctions import all_prefixes
+from aalpy.utils.HelperFunctions import all_prefixes, all_suffixes
 
 EMPTY_WORD = tuple()
 QUIESCENCE_TUPLE = tuple([QUIESCENCE])
@@ -23,7 +25,9 @@ class ApproximatedIoltsObservationTable:
 
         self.sul = sul
 
-        self.cache_is_defined = set()
+        self.cache_for_is_defined = set()
+        self.cache_for_row = dict()
+        self.cache_for_row_plus = dict()
 
         self.A_input = [tuple([a]) for a in input_alphabet]
         self.A_output = [tuple([a]) for a in output_alphabet]
@@ -32,19 +36,28 @@ class ApproximatedIoltsObservationTable:
         self.S = list()
         self.S_dot_A = []
         self.E = []
-        self.T = defaultdict(lambda: defaultdict(set))
-        self.T_completed = defaultdict(lambda: defaultdict(bool))
+        self.T = dict(dict())
+        self.T_completed = dict(dict())
 
         self.S.append(EMPTY_WORD)
         self.E.append(EMPTY_WORD)
 
     def is_defined(self, word):
-        return all(self._prefix_is_defined(prefix) for prefix in all_prefixes(word))
-
-    def _prefix_is_defined(self, s: tuple):
-        if s in self.cache_is_defined:
+        if word in self.cache_for_is_defined:
             return True
 
+        for prefix in all_prefixes(word):
+            if prefix in self.cache_for_is_defined:
+                continue
+
+            if not self._prefix_is_defined(prefix):
+                return False
+
+            self.cache_for_is_defined.add(prefix)
+
+        return True
+
+    def _prefix_is_defined(self, s: tuple):
         if s == EMPTY_WORD:
             return True
         elif len(s) == 1:
@@ -60,37 +73,56 @@ class ApproximatedIoltsObservationTable:
         prev_is_input = prev.startswith("?")
         prev_is_output = prev.startswith("!")
         prev_is_quiescence = prev == QUIESCENCE
-        quiescence_in_T = QUIESCENCE in self.row(s[:-1])[EMPTY_WORD]
+        quiescence_in_cell = self.cell_contains(s[:-1], EMPTY_WORD, QUIESCENCE)
 
         next_is_input = next.startswith("?")
         next_is_output = next.startswith("!")
         next_is_quiescence = next == QUIESCENCE
-        next_in_T = next in self.row(s[:-1])[EMPTY_WORD]
+        next_in_cell = self.cell_contains(s[:-1], EMPTY_WORD, next)
 
-        valid_input = (prev_is_output or prev_is_quiescence or quiescence_in_T) and next_is_input
-        valid_output = (prev_is_input or prev_is_output) and next_is_output and next_in_T
-        valid_quiescence = (quiescence_in_T and not prev_is_quiescence and next_is_quiescence)
+        valid_input = (prev_is_output or prev_is_quiescence or quiescence_in_cell) and next_is_input
+        valid_output = (prev_is_input or prev_is_output) and next_is_output and next_in_cell
+        valid_quiescence = (quiescence_in_cell and not prev_is_quiescence and next_is_quiescence)
 
         is_defined = valid_input or valid_output or valid_quiescence
-
-        if is_defined:
-            self.cache_is_defined.add(s)
 
         return is_defined
 
     def row(self, s):
+        if s in self.cache_for_row:
+            return self.cache_for_row[s]
+
         result = SortedDict(SortedSet)
         for e in self.E:
             result[e] = SortedSet(self.T[s][e])
 
+        self.cache_for_row[s] = result
         return result
 
     def row_plus(self, s):
+        if s in self.cache_for_row_plus:
+            return self.cache_for_row_plus[s]
+
         result = SortedDict(tuple)
         for e in self.E:
             result[e] = (SortedSet(self.T[s][e]), self.T_completed[s][e])
 
+        self.cache_for_row_plus[s] = result
         return result
+
+    def row_equals(self, s1, s2) -> bool:
+        return all(self.T[s1][e] == self.T[s2][e] for e in self.E)
+
+    def row_plus_equals(self, s1, s2, skip_row_equals: bool = False) -> bool:
+        return (skip_row_equals or self.row_equals(s1, s2)) and all(
+            self.T_completed[s1][e] == self.T_completed[s2][e] for e in self.E)
+
+    def cell_contains(self, s, e, out):
+        if s not in self.T:
+            return False
+        if e not in self.T[s]:
+            return False
+        return out in self.T[s][e]
 
     def is_globally_closed(self):
         rows_to_close = SortedList()
@@ -99,7 +131,7 @@ class ApproximatedIoltsObservationTable:
             if not self.is_defined(s1 + a):
                 continue
 
-            if not any(self.row_plus(s1 + a) == self.row_plus(s2) for s2 in self.S):
+            if not any(self.row_plus_equals(s1 + a, s2) for s2 in self.S):
                 rows_to_close.add(s1 + a)
                 break
 
@@ -109,31 +141,39 @@ class ApproximatedIoltsObservationTable:
             return True, []
 
     def is_globally_consistent(self):
-        causes_of_inconsistency = SortedList()
+        e_for_consistency = SortedList()
+        cause = None
 
         for s1, s2 in itertools.product(self.S, self.S):
             for a, e in itertools.product(self.A, self.E):
                 if not self.is_defined(s1 + a) or not self.is_defined(s2 + a):
                     continue
 
-                if self.row(s1) == self.row(s2) and self.row(s1 + a)[e] != self.row(s2 + a)[e]:
-                    causes_of_inconsistency.add(a + e)
+                is_row_equals = self.row_equals(s1, s2)
+
+                if is_row_equals and self.row(s1 + a)[e] != self.row(s2 + a)[e]:
+                    e_for_consistency.add(a + e)
+                    cause = f"{s1} + {a} + {e} => {self.row_plus(s1 + a)[e]} \n {s2} + {a} + {e} => {self.row_plus(s2 + a)[e]}"
                     break
 
-                if self.row_plus(s1) == self.row_plus(s2) and self.row_plus(s1 + a)[e] != self.row_plus(s2 + a)[e]:
-                    causes_of_inconsistency.add(a + e)
+                if is_row_equals and self.row_plus_equals(s1, s2, True) and self.row_plus(s1 + a)[e] != \
+                        self.row_plus(s2 + a)[e]:
+                    e_for_consistency.add(a + e)
+                    cause = f"{s1} + {a} + {e} => {self.row_plus(s1 + a)[e]} \n {s2} + {a} + {e} => {self.row_plus(s2 + a)[e]}"
                     break
 
-        if causes_of_inconsistency:
-            return False, [causes_of_inconsistency[0]]
+        if e_for_consistency:
+            return False, [e_for_consistency[0]], cause
         else:
-            return True, []
+            return True, [], None
 
-    def is_quiescence_reducible(self) -> tuple[bool, list]:
+    def is_quiescence_reducible(self) -> Union[tuple[bool, list[Any], str], tuple[bool, list[Any], None]]:
         for s1, s2 in itertools.product(self.S, self.S):
-            if QUIESCENCE not in self.row(s1)[EMPTY_WORD]:
+            if not self.is_defined(s1) or not self.is_defined(s2):
                 continue
-            if self.row_plus(s1 + QUIESCENCE_TUPLE) != self.row_plus(s2):
+            if not self.cell_contains(s1, EMPTY_WORD, QUIESCENCE):
+                continue
+            if not self.row_equals(s1 + QUIESCENCE_TUPLE, s2):
                 continue
 
             wait = [(s1, s2, EMPTY_WORD)]
@@ -142,23 +182,20 @@ class ApproximatedIoltsObservationTable:
             while wait:
                 s1, s2, t = wait.pop(0)
 
-                s1_cell_values = [
-                                     (out,) for out in self.row(s1)[EMPTY_WORD]
-                                 ] + self.A_input
-                s2_cell_values = [
-                                     (out,) for out in self.row(s2)[EMPTY_WORD]
-                                 ] + self.A_input
+                s1_cell_values = SortedList((out,) for out in self.row(s1)[EMPTY_WORD]) + self.A_input
+                s2_cell_values = SortedList((out,) for out in self.row(s2)[EMPTY_WORD]) + self.A_input
 
                 for a in s2_cell_values:
                     if a not in s1_cell_values:
-                        return True, [t]
+                        cause = f"{s1} + {EMPTY_WORD} => {self.row_plus(s1)[EMPTY_WORD]} \n {s2} + {EMPTY_WORD} => {self.row_plus(s2)[EMPTY_WORD]} / {a} | t = {t}"
+                        return True, [t], cause
 
                     s_prime_1 = None
                     s_prime_2 = None
                     for s in self.S:
-                        if self.row_plus(s) == self.row_plus(s1 + a):
+                        if self.row_equals(s, s1 + a):
                             s_prime_1 = s
-                        if self.row_plus(s) == self.row_plus(s2 + a):
+                        if self.row_equals(s, s2 + a):
                             s_prime_2 = s
 
                     if (
@@ -171,7 +208,7 @@ class ApproximatedIoltsObservationTable:
 
                 past.append((s1, s2))
 
-        return False, []
+        return False, [], None
 
     def s_dot_a(self):
         """
@@ -181,6 +218,17 @@ class ApproximatedIoltsObservationTable:
         for s, a in itertools.product(self.S, self.A):
             if s + a not in s_set:
                 yield s + a
+
+    def get_quiescence_traces(self, word):
+        extended_word = list(itertools.chain.from_iterable([[letter, QUIESCENCE] for letter in word]))
+        all_indexes = sorted(set([tuple(set(prod)) for prod in
+                                  itertools.product(range(1, len(extended_word), 2), repeat=len(extended_word))]))
+
+        for indexes in all_indexes:
+            trace = extended_word.copy()
+            for index in sorted(indexes, reverse=True):
+                del trace[index]
+            yield tuple(trace)
 
     def update_obs_table(self, s_set: list = None, e_set: list = None):
         """
@@ -195,22 +243,30 @@ class ApproximatedIoltsObservationTable:
         Returns:
 
         """
+        self.cache_for_row.clear()
+        self.cache_for_row_plus.clear()
 
         update_S = s_set if s_set is not None else list(self.S) + list(self.s_dot_a())
         update_E = e_set if e_set is not None else self.E
 
         for s, e in itertools.product(update_S, update_E):
+            if s not in self.T:
+                self.T[s] = dict()
+                self.T_completed[s] = dict()
 
+            if e not in self.T[s]:
+                self.T[s][e] = set()
+                self.T_completed[s][e] = False
+
+        for s, e in itertools.product(update_S, update_E):
             if not self.is_defined(s + e):
-                continue
-
-            if self.T[s][e] < self.sul.get_cache_elements(s + e):
-                self.T[s][e].update(self.sul.get_cache_elements(s + e))
                 continue
 
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
-                self.T[s][e].update(self.sul.get_cache_elements(s + e))
+                # self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
+                # TODO updating cell after completed mark creates huge problems!!!
+                # self.T[s][e].update(self.sul.get_cache_elements(s + e))
                 continue
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
@@ -231,27 +287,34 @@ class ApproximatedIoltsObservationTable:
                     self.T_completed[s][e] = True
                 continue
 
+            # Note looks like that doesn't work well
+            # if self.T[s][e] < self.sul.get_cache_elements(s + e):
+            #    self.T[s][e].update(self.sul.get_cache_elements(s + e))
+            # else:
+            #    self.sul.query(s + e, False)
+            #    self.T[s][e].update(self.sul.get_cache_elements(s + e))
+
             output = self.sul.query(s + e, False)
 
             if output is None:
                 continue
 
             self.T[s][e].update(self.sul.get_cache_elements(s + e))
+
+            # TODO this is two slow, need to find a better solution!!!
+            # Maybe cache the caching in a way, that only the clean trace is used as a key...
+            # All quiescence traces needs to be update, otherwise the observation table doesn't have the same data.
+            # (s + e) => sQ + eQ
+
+            # for quiescence_trace in self.get_quiescence_traces(s + e):
+            #    self.T[s][e].update(self.sul.get_cache_elements(quiescence_trace))
+
             self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
 
-
-        # TODO make the observation table derterministic:
-        # * no Nones
-        # * sort keys of T
-        # * sort keys of T_completed
-        # * sort values of T
-        # TODO use sorted set here
-        # TODO use sorted dict here
         for s, e in itertools.product(update_S, update_E):
             self.T[s][e] = set(filter(None, self.T[s][e]))
             self.T[s].update(dict(sorted(self.T[s].items())))
             self.T_completed[s].update(dict(sorted(self.T_completed[s].items())))
-
 
     def get_row_key(self, s) -> str:
         return str(sorted(self.row(s).items()))
@@ -337,7 +400,7 @@ class ApproximatedIoltsObservationTable:
                 if not self.row(s)[EMPTY_WORD]:
                     pass
 
-                if output in self.row(s)[EMPTY_WORD]:
+                if self.cell_contains(s, EMPTY_WORD, output):
                     row = self.get_row_plus_key(s + output_tuple)
                     if output_tuple == QUIESCENCE_TUPLE:
                         state.add_quiescence(state_distinguish.get(row))
@@ -375,3 +438,12 @@ class ApproximatedIoltsObservationTable:
             automaton.remove_state(automaton.get_state_by_id(state_id))
 
         return automaton
+
+    def trim(self, h: IoltsMachine):
+        prefix_to_state_set = set([state.prefix for state in h.states])
+
+        to_remove = set(self.S) - prefix_to_state_set
+
+        for s in to_remove:
+            print(f"Remove: {s}")
+            self.S.remove(s)

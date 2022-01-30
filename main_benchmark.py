@@ -10,7 +10,7 @@ from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 def get_sul():
     specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/02_car_alarm.dot", "iolts")
-    return IoltsMachineSUL(specification, 0.9, 0.9)
+    return IoltsMachineSUL(specification, 0.99, 0.99)
 
 
 def get_model_checker(sul):
@@ -67,5 +67,4 @@ def main():
 
 
 if __name__ == "__main__":
-    random.seed(0)
     main()

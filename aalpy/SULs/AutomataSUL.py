@@ -323,6 +323,9 @@ class IoltsMachineSUL(SUL):
         p_hidden = (1 - 1 / (num_unique_outputs + 1)) ** num_cached_outputs
         return 1 - p_hidden
 
+    def completeness_threshold_reached(self, word: tuple) -> bool:
+        return self.calculate_all_seen_probability(word) >= self.completeness_certainty_probability
+
     def completeness_query(self, word: tuple, observed_set: set) -> bool:
         # The completeness query should not use the cache system.
         # It should always make the real queries on the SUL.
@@ -360,8 +363,10 @@ class IoltsMachineSUL(SUL):
         saved_num_queries = self.num_queries
         saved_num_listens = self.num_listens
         is_complete = True
+        
+        # self.completeness_threshold_reached(word) and observed_set.issubset(self.get_cache_elements(word))
 
-        while self.calculate_all_seen_probability(word) < self.completeness_certainty_probability:
+        while not self.completeness_threshold_reached(word):
             output = self.query(word, False)
             if output not in observed_set:
                 is_complete = False

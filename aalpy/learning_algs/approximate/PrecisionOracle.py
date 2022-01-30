@@ -135,6 +135,7 @@ class ModelCheckerPrecisionOracle:
 
         all_counter_examples = []
 
+        # TODO check if this two calls can be removed!
         h_minus.remove_self_loops_from_non_quiescence_states()
         h_plus.remove_self_loops_from_non_quiescence_states()
 
@@ -142,6 +143,10 @@ class ModelCheckerPrecisionOracle:
 
         if not is_safe:
             for cex, prop, suffixes in data:
+                # TODO improve printing
+                # TODO add print level
+                # TODO add for what H the counter example was found
+                # TODO add a debug info string that the user can set
                 print(f'[{prop}] Found safety property counter example: {cex}')
                 all_counter_examples += [cex] + [cex + list(suffix) for suffix in suffixes]
 
