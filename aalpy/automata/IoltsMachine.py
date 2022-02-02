@@ -202,6 +202,9 @@ class IoltsMachine(Automaton):
         self.not_enabled_state = None
         self.healthy = True
 
+        self.input_alphabet = self.create_input_alphabet()
+        self.output_alphabet = self.create_output_alphabet()
+
     def reset_to_initial(self):
         """
         Resets the current state of the automaton to the initial state
@@ -321,6 +324,12 @@ class IoltsMachine(Automaton):
         return key
 
     def get_input_alphabet(self) -> list:
+        return self.input_alphabet
+
+    def get_output_alphabet(self) -> list:
+        return self.output_alphabet
+
+    def create_input_alphabet(self) -> list:
         """
         Returns the input alphabet
         """
@@ -330,7 +339,7 @@ class IoltsMachine(Automaton):
 
         return sorted(list(set(result)))
 
-    def get_output_alphabet(self) -> list:
+    def create_output_alphabet(self) -> list:
         """
         Returns the output alphabet
         """

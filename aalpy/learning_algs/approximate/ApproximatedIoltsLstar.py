@@ -1,14 +1,14 @@
-import random
 import time
 from collections import Counter
-from sortedcontainers import SortedSet
 
+from sortedcontainers import SortedSet
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine
 from aalpy.learning_algs.approximate.ApproximatedIoltsObservationTable import (
     ApproximatedIoltsObservationTable,
 )
+from aalpy.learning_algs.approximate.PrecisionOracle import ModelCheckerPrecisionOracle
 from aalpy.learning_algs.deterministic.CounterExampleProcessing import (
     longest_prefix_cex_processing,
 )
@@ -21,7 +21,8 @@ def run_approximated_Iolts_Lstar(
         output_alphabet: list,
         sul: IoltsMachineSUL,
         oracle,
-        print_level=2,
+        enforce_quiescence_reduced: bool = False,
+        print_level=0,
 ) -> tuple[IoltsMachine, IoltsMachine, IoltsMachine, object]:
     """ """
     start_time = time.time()
@@ -38,8 +39,6 @@ def run_approximated_Iolts_Lstar(
     observation_table = ApproximatedIoltsObservationTable(
         input_alphabet, output_alphabet, sul
     )
-
-    force_stop = False
 
     while True:
         learning_start = time.time()
@@ -64,7 +63,6 @@ def run_approximated_Iolts_Lstar(
 
             stabilizing_rounds = 0
             while not (is_closed and is_consistent):
-                print(".", end='')
                 stabilizing_rounds += 1
                 if not (stabilizing_rounds < 100):
                     raise Exception("Dead lock")
@@ -83,7 +81,8 @@ def run_approximated_Iolts_Lstar(
 
                     # TODO if nothing has changed we should update here via cache and reduce the observation table!
                     if not added_e_set:
-                        raise Exception(f"[ERROR] Could not resolve inconsistent observation table! \n {cause}")
+                        raise Exception(
+                            f"[ERROR] Could not resolve inconsistent observation table! May increase certainty_probability. \n {cause}")
 
                     if print_level > 1:
                         print(f"Consistent E set: {added_e_set}")
@@ -91,21 +90,22 @@ def run_approximated_Iolts_Lstar(
                     observation_table.update_obs_table()
                     continue
 
-            if force_stop:
-                print("Force stop")
-                break
-
             print(f" Stabilizing rounds: {stabilizing_rounds}")
             # Check quiescence reducible
             is_reducible, e_set_reducible, cause = observation_table.is_quiescence_reducible()
-            added_e_set = extend_set(observation_table.E, e_set_reducible)
-            if added_e_set:
-                if print_level > 1:
-                    print(f"Found E by quiescence reducible: {added_e_set} \n {cause}")
-            elif is_reducible and not added_e_set:
-                if print_level > 1:
-                    print(f"Quiescence reducible failed! {e_set_reducible} \n {cause}")
+
+            if is_reducible:
+                print(f" Found quiescence reducible cause: {e_set_reducible} \n {cause}")
+
+            if not enforce_quiescence_reduced:
                 break
+            else:
+                added_e_set = extend_set(observation_table.E, e_set_reducible)
+                if added_e_set:
+                    if print_level > 1:
+                        print(f"Found E by quiescence reducible: {added_e_set} \n {cause}")
+                elif is_reducible and not added_e_set:
+                    raise Exception(f"Quiescence reducible failed! {e_set_reducible} \n {cause}")
 
         learning_time += time.time() - learning_start
 
@@ -114,21 +114,31 @@ def run_approximated_Iolts_Lstar(
         h_plus = observation_table.gen_hypothesis_plus(False)
         h_star = observation_table.gen_hypothesis_star()
 
-        # all_cex_from_minus_and_plus = oracle.find_cex(h_minus, h_plus, observation_table)
-        # all_cex_from_minus_and_star = oracle.find_cex(h_minus, h_star, observation_table)
+        oracle: ModelCheckerPrecisionOracle
 
+        h_minus_cex, cause = oracle.find_liveness_cex(h_minus)
+        if h_minus_cex and print_level > 1:
+            print(cause)
 
+        h_plus_cex, cause = [], None #oracle.find_safety_cex(h_plus)
+        if h_plus_cex and print_level > 1:
+            print(cause)
 
-        all_cex_from_minus_and_star = oracle.find_cex(h_star, h_star, observation_table)
+        h_star_cex, cause = oracle.find_safety_cex(h_star)
+        if h_star_cex and print_level > 1:
+            print(cause)
 
-        if not all_cex_from_minus_and_star:
+        all_counter_examples = sorted(
+            [list(unique_cex) for unique_cex in SortedSet(tuple(cex) for cex in h_minus_cex + h_plus_cex + h_star_cex)])
+
+        if not all_counter_examples:
             break
 
-        all_counter_examples = sorted([list(unique_cex) for unique_cex in SortedSet(tuple(cex) for cex in all_cex_from_minus_and_star)])
-
-        if resolve(all_counter_examples, observation_table, cex_cache_longest_prefix, cex_cache_prefix, cex_cache_suffix):
-            continue
-        else:
+        if not resolve(all_counter_examples,
+                       observation_table,
+                       cex_cache_longest_prefix,
+                       cex_cache_prefix,
+                       cex_cache_suffix):
             raise Exception("Error! no new counter example was found that would improve the observation table!")
 
     if print_level > 3:
@@ -145,6 +155,7 @@ def run_approximated_Iolts_Lstar(
         'cache_size': len(sul.cache.keys()),
         's_size': len(observation_table.S),
         'e_size': len(observation_table.E),
+        'quiescence_reduced': not is_reducible,
 
         'total_time': total_time,
         'learning_time': learning_time,
@@ -153,12 +164,12 @@ def run_approximated_Iolts_Lstar(
         'queries_learning': sul.num_queries,
         'steps_learning': sul.num_steps,
         'listens_leaning': sul.num_listens,
-        'query_certainty_probability': sul.query_certainty_probability,
+        'query_certainty_probability': sul.query_certainty_threshold,
 
         'queries_completeness': sul.num_completeness_queries,
         'steps_completeness': sul.num_completeness_steps,
         'listens_completeness': sul.num_completeness_listens,
-        'completeness_certainty_probability': sul.completeness_certainty_probability,
+        'completeness_certainty_probability': sul.completeness_certainty_threshold,
     }
 
     print_learning_info_approximate_lstar(info)

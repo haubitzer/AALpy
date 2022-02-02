@@ -1,0 +1,10 @@
+learning_rounds,automaton_size_h_minus,automaton_size_h_plus,automaton_size_h_star,cache_size,s_size,e_size,quiescence_reduced,total_time,learning_time,checking_time,queries_learning,steps_learning,listens_leaning,query_certainty_probability,queries_completeness,steps_completeness,listens_completeness,completeness_certainty_probability,run
+4,15,18,17,102,36,12,True,4.67,2.86,1.81,1042,1948,2788,0.999,3164,5710,7852,0.999,1
+5,15,18,17,93,33,13,False,5.87,3.38,2.49,996,1839,2620,0.999,2812,4984,6815,0.999,2
+4,15,18,17,102,36,12,True,4.84,2.93,1.91,1154,2108,2893,0.999,3043,5480,7577,0.999,3
+3,10,10,9,21,12,7,False,1.45,0.17,1.28,102,144,180,0.999,279,365,524,0.999,4
+5,15,18,17,93,33,13,False,6.24,3.77,2.47,957,1728,2426,0.999,2563,4692,6418,0.999,5
+4,15,18,17,102,36,12,True,4.92,2.99,1.93,1315,2379,3344,0.999,3359,6063,8346,0.999,6
+3,10,10,9,21,12,7,False,1.41,0.12,1.29,58,82,112,0.999,332,447,601,0.999,7
+4,15,18,17,102,36,12,True,5.33,3.44,1.89,1270,2302,3145,0.999,3311,5978,8065,0.999,8
+4,15,18,17,102,36,12,True,5.22,3.12,2.1,1275,2343,3236,0.999,3306,5914,7983,0.999,9

@@ -1,5 +1,7 @@
 import random
 import time
+import csv
+import pandas
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine
@@ -8,12 +10,10 @@ from aalpy.learning_algs.approximate.PrecisionOracle import ModelCheckerPrecisio
 from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 
-def get_sul():
+def get_non_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
     specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/02_car_alarm.dot", "iolts")
-    return IoltsMachineSUL(specification, 0.99, 0.99)
+    sul = IoltsMachineSUL(specification, 0.99, 0.99)
 
-
-def get_model_checker(sul):
     checker = Mcrl2ModelChecker(sul)
     checker.add_liveness_property("./DotModels/Iolts/car_alarm_system/liveness_property.mcf", [])
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_1.mcf", [])
@@ -32,12 +32,50 @@ def get_model_checker(sul):
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_1.mcf", [])
     # checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_2.mcf", [])
 
-    return checker
+    return sul, checker
+
+
+def get_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
+    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/02_car_alarm.dot", "iolts")
+    sul = IoltsMachineSUL(specification, 0.99, 0.99)
+
+    checker = Mcrl2ModelChecker(sul)
+    checker.add_liveness_property("./DotModels/Iolts/car_alarm_system/liveness_property.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_1.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_2.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_3.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_4.mcf", [])
+
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/02_requirement_1.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/02_requirement_2.mcf", [])
+
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/03_requirement_1.mcf", [])
+
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_1.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_2.mcf", [])
+
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_1.mcf", [])
+    # checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_2.mcf", [])
+
+    return sul, checker
+
+
+def get_tftp() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
+    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_client/00_client.dot", "iolts")
+    sul = IoltsMachineSUL(specification, 0.999, 0.999)
+
+    checker = Mcrl2ModelChecker(sul)
+    checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',),('!DATA',)])
+    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_1.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
+    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_3.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_4.mcf", [])
+
+    return sul, checker
 
 
 def run():
-    sul = get_sul()
-    checker = get_model_checker(sul)
+    sul, checker = get_tftp()
     oracle = ModelCheckerPrecisionOracle(sul, checker)
     return run_approximated_Iolts_Lstar(
         sul.iolts.get_input_alphabet(),
@@ -45,26 +83,34 @@ def run():
         sul, oracle)
 
 
-def print_data(data):
-    for i, info in enumerate(data):
-        print(f"Result: {i} {str(info)}")
+def sava_results_as_csv(data):
+    with open('results.csv', mode='w') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=data[0].keys())
+        writer.writeheader()
+        writer.writerows(data)
+
+    pandas.set_option('display.max_columns', None)
+    pandas.set_option('display.width', 200)
+    print(pandas.read_csv('results.csv'))
 
 
 def main():
     data = []
-    for i in range(1, 2):
+    for i in range(1, 10):
         print("'''''''''''''''''''''''''''")
         print(f"Run: {i}")
-        _, _, _, info = run()
 
-        if info:
+        try:
+            _, _, h_star, info = run()
+            print(h_star)
+            info["run"] = i
             data.append(info)
-        else:
-            print("[ERROR] Info object was empty")
-            data.append(None)
+        except Exception as e:
+            print(f"[ERROR] Throw exception: \n {e}")
 
-    print_data(data)
+    sava_results_as_csv(data)
 
 
 if __name__ == "__main__":
+    # random.seed(1)
     main()

@@ -1,6 +1,6 @@
 from collections import Counter
 from time import sleep
-from typing import Optional
+from typing import Optional, Union, Tuple, List, Any, Sized
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsMachine, IoltsState
@@ -121,39 +121,33 @@ class ModelCheckerPrecisionOracle:
         self.sul = sul
         self.model_checker = model_checker
 
-    def find_cex(self, h_minus: IoltsMachine, h_plus: IoltsMachine, _observation_table=None) -> Optional[
-        list[list[tuple]]]:
-        # TODO counter example on SUL, who is responsible?
-        # check if the property holds on the SUL, this should be done by running the counter example on the SUL.
-        # However, to run the counter example on the SUL we need to have a step_to function again. If the counter example
-        # doesn't hold on the SUL, we found a bug in the SUL or the property is wrong. This means that we need to stop learning,
-        # It is not clear how to recover from that error, so we need to throw an assert.
-
-        # TODO are safety properties also binding for h_minus?
-        # Safety properties needs to hold for upper hypothesis, but are they also valid for the lower hypothesis.
-        # However, we think that, it doesn't make sense to check liveness on the upper H, because the chaos state is always live.
-
+    def find_safety_cex(self, hypothesis: IoltsMachine) -> Union[tuple[list[Sized], str], tuple[list[Any], None]]:
         all_counter_examples = []
+        cause = ""
 
-        # TODO check if this two calls can be removed!
-        h_minus.remove_self_loops_from_non_quiescence_states()
-        h_plus.remove_self_loops_from_non_quiescence_states()
-
-        is_safe, data = self.model_checker.check_safety_properties(h_plus)
+        is_safe, data = self.model_checker.check_safety_properties(hypothesis)
 
         if not is_safe:
             for cex, prop, suffixes in data:
-                # TODO improve printing
-                # TODO add print level
-                # TODO add for what H the counter example was found
-                # TODO add a debug info string that the user can set
-                print(f'[{prop}] Found safety property counter example: {cex}')
+                cause += f'[{prop}] Found safety property counter example: {cex} \n'
                 all_counter_examples += [cex] + [cex + list(suffix) for suffix in suffixes]
 
-        is_live, data = self.model_checker.check_liveness_properties(h_minus)
+        if all_counter_examples:
+            return sorted(all_counter_examples, key=len), cause
+        else:
+            return [], None
+
+    def find_liveness_cex(self, hypothesis: IoltsMachine) -> Union[tuple[list[Any], str], tuple[None, None]]:
+        all_counter_examples = []
+        cause = ""
+
+        is_live, data = self.model_checker.check_liveness_properties(hypothesis)
         if not is_live:
             for cex, prop, suffixes in data:
-                print(f'[{prop}] Found property property counter example: {cex}')
+                cause += f'[{prop}] Found property property counter example: {cex}'
                 all_counter_examples += [cex] + [cex + list(suffix) for suffix in suffixes]
 
-        return all_counter_examples if len(all_counter_examples) > 0 else None
+        if all_counter_examples:
+            return sorted(all_counter_examples, key=len), cause
+        else:
+            return [], None

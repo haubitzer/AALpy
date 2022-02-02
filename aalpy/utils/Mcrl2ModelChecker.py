@@ -101,11 +101,12 @@ class Mcrl2Converter:
 class Mcrl2Interface:
 
     def __init__(self, model: IoltsMachine, sul):
+        self.main_folder = f"mcrl2_data-{time.time()}"
         self.model_as_mcrl2 = Mcrl2Converter(model, sul).convert()
 
     def holds(self, prop: str) -> Union[tuple[bool, None], tuple[bool, list[str]]]:
         name = Path(prop).stem
-        folder = f"tmp/{name}_{time.time()}/"
+        folder = f"tmp/{self.main_folder}/{name}/"
 
         make_new_folder = f"mkdir -p {folder} && rm -r {folder} && mkdir {folder}"
         convert_to_lps = f"echo \"{self.model_as_mcrl2}\" | mcrl22lps > {folder}{name}.lps"
@@ -133,16 +134,9 @@ class Mcrl2Interface:
         if result == "true":
             return True, None
         elif result == "false":
-            if not self.get_counter_example(f"{folder}{name}.pbes.evidence.dot"):
-                self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
-
             return False, self.get_counter_example(f"{folder}{name}.pbes.evidence.dot")
         else:
-
-            print(cmd)
-            print(stderr)
-            print(stdout)
-            raise Exception("Something went wrong in the mcrl2 part!")
+            raise Exception(f"Something went wrong in the mcrl2 part! \n stderr: {stderr} \n stdout{stdout}")
 
     @staticmethod
     def get_counter_example(path: str) -> list[str]:

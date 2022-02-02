@@ -117,6 +117,7 @@ def print_learning_info_approximate_lstar(info: dict):
     print('S size                   : {}'.format(info['s_size']))
     print('E size                   : {}'.format(info['e_size']))
     print('Cache size               : {}'.format(info['cache_size']))
+    print('Quiescence reduced       : {}'.format(info['quiescence_reduced']))
     print('Time (in seconds)')
     print('  Total                  : {}'.format(info['total_time']))
     print('  Learning algorithm     : {}'.format(info['learning_time']))
