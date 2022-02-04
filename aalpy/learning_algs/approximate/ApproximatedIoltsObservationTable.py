@@ -234,8 +234,8 @@ class ApproximatedIoltsObservationTable:
         Returns:
 
         """
-        # self.S = sorted(self.S, key=len)
-        # self.E = sorted(self.E, key=len)
+        self.S = sorted(self.S, key=len)
+        self.E = sorted(self.E, key=len)
 
         def reduce_trace(trace) -> tuple:
             return tuple([letter for letter in trace if letter != QUIESCENCE])
@@ -295,8 +295,9 @@ class ApproximatedIoltsObservationTable:
             if self.sul.query(s + e, False) is None:
                 continue
 
-            self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
+
             self.T[s][e].update(self.sul.get_cache_elements(s + e))
+            self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
             # self.T[s][e].update(self.sul.get_cache_elements(self.sul.reduce_trace(s + e)))
 
 

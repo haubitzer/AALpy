@@ -1,6 +1,5 @@
-import random
-import time
 import csv
+
 import pandas
 
 from aalpy.SULs import IoltsMachineSUL
@@ -16,8 +15,8 @@ def get_non_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
     checker = Mcrl2ModelChecker(sul)
     checker.add_liveness_property("./DotModels/Iolts/car_alarm_system/liveness_property.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_1.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_2.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_1.mcf", [('?lock',)])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_2.mcf", [('?close',)])
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_3.mcf", [])
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_4.mcf", [])
 
@@ -26,10 +25,11 @@ def get_non_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/03_requirement_1.mcf", [])
 
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_1.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_2.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_1.mcf", [('?lock',), ('?unlock',)])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_2.mcf", [('?close',), ('?open',)])
 
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_1.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_1.mcf",
+                                [('!opticalAlarm_OFF',), ('!opticalAlarm_ON',)])
     # checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_2.mcf", [])
 
     return sul, checker
@@ -41,8 +41,8 @@ def get_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
     checker = Mcrl2ModelChecker(sul)
     checker.add_liveness_property("./DotModels/Iolts/car_alarm_system/liveness_property.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_1.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_2.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_1.mcf", [('?lock',)])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_2.mcf", [('?close',)])
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_3.mcf", [])
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/01_requirement_4.mcf", [])
 
@@ -51,10 +51,11 @@ def get_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
     checker.add_safety_property("./DotModels/Iolts/car_alarm_system/03_requirement_1.mcf", [])
 
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_1.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_2.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_1.mcf", [('?lock',), ('?unlock',)])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/05_requirement_2.mcf", [('?close',), ('?open',)])
 
-    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_1.mcf", [])
+    checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_1.mcf",
+                                [('!opticalAlarm_OFF',), ('!opticalAlarm_ON',)])
     # checker.add_safety_property("./DotModels/Iolts/car_alarm_system/06_requirement_2.mcf", [])
 
     return sul, checker
@@ -65,7 +66,7 @@ def get_tftp() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
     sul = IoltsMachineSUL(specification, 0.99, 0.99)
 
     checker = Mcrl2ModelChecker(sul)
-    checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',),('!DATA',)])
+    checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',), ('!DATA',)])
     checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_1.mcf", [])
     checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
     checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_3.mcf", [])
@@ -104,7 +105,6 @@ def main():
         print(h_star)
         info["run"] = i
         data.append(info)
-
 
     sava_results_as_csv(data)
 
