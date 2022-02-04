@@ -241,7 +241,8 @@ class IoltsMachineSUL(SUL):
         if not in_cache:
             return set()
 
-        return set(sorted(list(set(counter.elements()))))
+        outputs = sorted(counter.elements(), key=lambda x: x or "")
+        return set(outputs)
 
     def _cache_update(self, word, output):
         if word not in self.cache.keys():

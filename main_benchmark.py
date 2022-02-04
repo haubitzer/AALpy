@@ -12,7 +12,7 @@ from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 def get_non_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
     specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/02_car_alarm.dot", "iolts")
-    sul = IoltsMachineSUL(specification, 0.99, 0.99)
+    sul = IoltsMachineSUL(specification, 0.999, 0.999)
 
     checker = Mcrl2ModelChecker(sul)
     checker.add_liveness_property("./DotModels/Iolts/car_alarm_system/liveness_property.mcf", [])
@@ -62,7 +62,7 @@ def get_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
 def get_tftp() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
     specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_client/00_client.dot", "iolts")
-    sul = IoltsMachineSUL(specification, 0.999, 0.999)
+    sul = IoltsMachineSUL(specification, 0.99, 0.99)
 
     checker = Mcrl2ModelChecker(sul)
     checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',),('!DATA',)])
@@ -75,7 +75,7 @@ def get_tftp() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
 
 def run():
-    sul, checker = get_tftp()
+    sul, checker = get_non_det_car_alarm()
     oracle = ModelCheckerPrecisionOracle(sul, checker)
     return run_approximated_Iolts_Lstar(
         sul.iolts.get_input_alphabet(),
@@ -96,17 +96,15 @@ def sava_results_as_csv(data):
 
 def main():
     data = []
-    for i in range(1, 10):
+    for i in range(1, 5):
         print("'''''''''''''''''''''''''''")
         print(f"Run: {i}")
 
-        try:
-            _, _, h_star, info = run()
-            print(h_star)
-            info["run"] = i
-            data.append(info)
-        except Exception as e:
-            print(f"[ERROR] Throw exception: \n {e}")
+        _, _, h_star, info = run()
+        print(h_star)
+        info["run"] = i
+        data.append(info)
+
 
     sava_results_as_csv(data)
 

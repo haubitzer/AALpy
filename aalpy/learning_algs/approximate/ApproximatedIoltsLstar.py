@@ -21,8 +21,8 @@ def run_approximated_Iolts_Lstar(
         output_alphabet: list,
         sul: IoltsMachineSUL,
         oracle,
-        enforce_quiescence_reduced: bool = False,
-        print_level=0,
+        enforce_quiescence_reduced: bool = True,
+        print_level=2,
 ) -> tuple[IoltsMachine, IoltsMachine, IoltsMachine, object]:
     """ """
     start_time = time.time()
@@ -46,7 +46,7 @@ def run_approximated_Iolts_Lstar(
         print("-------------------------------------------------------------------------------------------------------")
         print(f"Learning round: {learning_rounds}")
         if not (learning_rounds < 25):
-            raise Exception("Leaning round hit 100")
+            raise Exception("Leaning rounds hit 100")
 
         if h_star:
             pass
@@ -65,7 +65,7 @@ def run_approximated_Iolts_Lstar(
             while not (is_closed and is_consistent):
                 stabilizing_rounds += 1
                 if not (stabilizing_rounds < 100):
-                    raise Exception("Dead lock")
+                    raise Exception("Stabilizing rounds hit 100")
 
                 is_closed, rows_to_close = observation_table.is_globally_closed()
                 if not is_closed:
@@ -105,7 +105,9 @@ def run_approximated_Iolts_Lstar(
                     if print_level > 1:
                         print(f"Found E by quiescence reducible: {added_e_set} \n {cause}")
                 elif is_reducible and not added_e_set:
-                    raise Exception(f"Quiescence reducible failed! {e_set_reducible} \n {cause}")
+                    print(f"Quiescence reducible failed! {e_set_reducible} \n {cause}")
+                    break
+                    # raise Exception(f"Quiescence reducible failed! {e_set_reducible} \n {cause}")
 
         learning_time += time.time() - learning_start
 

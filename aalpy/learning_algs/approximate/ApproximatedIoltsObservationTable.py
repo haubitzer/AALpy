@@ -6,7 +6,7 @@ from sortedcontainers import SortedSet, SortedList, SortedDict
 
 from aalpy.SULs import IoltsMachineSUL
 from aalpy.automata import IoltsState, IoltsMachine, QUIESCENCE
-from aalpy.utils.HelperFunctions import all_prefixes
+from aalpy.utils.HelperFunctions import all_prefixes, all_suffixes
 
 EMPTY_WORD = tuple()
 QUIESCENCE_TUPLE = tuple([QUIESCENCE])
@@ -82,7 +82,7 @@ class ApproximatedIoltsObservationTable:
 
         valid_input = (prev_is_output or prev_is_quiescence or quiescence_in_cell) and next_is_input
         valid_output = (prev_is_input or prev_is_output) and next_is_output and next_in_cell
-        valid_quiescence = (quiescence_in_cell and not prev_is_quiescence and next_is_quiescence)
+        valid_quiescence = (quiescence_in_cell and next_is_quiescence and not prev_is_quiescence)
 
         is_defined = valid_input or valid_output or valid_quiescence
 
@@ -188,14 +188,15 @@ class ApproximatedIoltsObservationTable:
                 for a in s2_cell_values:
                     if a not in s1_cell_values:
                         cause = f"{s1} + {EMPTY_WORD} => {self.row_plus(s1)[EMPTY_WORD]} \n {s2} + {EMPTY_WORD} => {self.row_plus(s2)[EMPTY_WORD]} / {a} | t = {t}"
-                        return True, all_prefixes(t), cause
+                        return True, all_suffixes(t), cause
 
                     s_prime_1 = None
                     s_prime_2 = None
                     for s in self.S:
                         if self.row_plus_equals(s, s1 + a):
                             s_prime_1 = s
-                        if self.row_plus_equals(s, s2 + a):
+                    for s in self.S:
+                        if self.row_plus_equals(s, s2 + a) and not self.row_plus_equals(s, s_prime_1):
                             s_prime_2 = s
 
                     if (
@@ -233,6 +234,8 @@ class ApproximatedIoltsObservationTable:
         Returns:
 
         """
+        # self.S = sorted(self.S, key=len)
+        # self.E = sorted(self.E, key=len)
 
         def reduce_trace(trace) -> tuple:
             return tuple([letter for letter in trace if letter != QUIESCENCE])
@@ -292,8 +295,10 @@ class ApproximatedIoltsObservationTable:
             if self.sul.query(s + e, False) is None:
                 continue
 
-            self.T[s][e].update(self.sul.get_cache_elements(s + e))
             self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
+            self.T[s][e].update(self.sul.get_cache_elements(s + e))
+            # self.T[s][e].update(self.sul.get_cache_elements(self.sul.reduce_trace(s + e)))
+
 
             # self.T[s][e].update(self.sul.get_cache_elements(self.sul.reduce_trace(s + e)))
             # self.T_completed[s][e] = self.sul.completeness_query(self.sul.reduce_trace(s + e), self.T[s][e])
@@ -307,7 +312,7 @@ class ApproximatedIoltsObservationTable:
             # self.T_completed[s][e] = self.sul.completeness_query(self.sul.reduce_trace(s + e), self.T[s][e])
 
         for s, e in itertools.product(update_s_set, update_e_set):
-            self.T[s][e] = set(filter(None, self.T[s][e]))
+            self.T[s][e] = set([elem for elem in self.T[s][e] if elem is not None])
             self.T[s].update(dict(sorted(self.T[s].items())))
             self.T_completed[s].update(dict(sorted(self.T_completed[s].items())))
 
@@ -398,7 +403,8 @@ class ApproximatedIoltsObservationTable:
                 if self.cell_contains(s, EMPTY_WORD, output):
                     row = self.get_row_plus_key(s + output_tuple)
                     if output_tuple == QUIESCENCE_TUPLE:
-                        state.add_quiescence(state_distinguish.get(row))
+                        state.add_quiescence(state)
+                        # state.add_quiescence(state_distinguish.get(row))
                     else:
                         state.add_output(output, state_distinguish.get(row))
                 elif not self.row_plus(s)[EMPTY_WORD][1] and with_chaos_state:

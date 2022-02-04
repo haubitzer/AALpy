@@ -110,6 +110,7 @@ class IoltsState(AutomatonState):
         self.transitions.pop(QUIESCENCE, None)
 
     def add_quiescence(self, new_state: IoltsState = None):
+        self.remove_quiescence(self)
         if new_state is None:
             new_state = self
 
