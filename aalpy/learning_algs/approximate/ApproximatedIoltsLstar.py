@@ -22,6 +22,8 @@ def run_approximated_Iolts_Lstar(
         sul: IoltsMachineSUL,
         oracle,
         enforce_quiescence_reduced: bool = True,
+        enforce_quiescence_self_loops: bool = True,
+        enforce_model_checking_h_plus: bool = False,
         print_level=2,
 ) -> tuple[IoltsMachine, IoltsMachine, IoltsMachine, object]:
     """ """
@@ -114,7 +116,7 @@ def run_approximated_Iolts_Lstar(
         # Create hypothesis
         h_minus = observation_table.gen_hypothesis_minus()
         h_plus = observation_table.gen_hypothesis_plus(False)
-        h_star = observation_table.gen_hypothesis_star()
+        h_star = observation_table.gen_hypothesis_star(enforce_quiescence_self_loops)
 
         oracle: ModelCheckerPrecisionOracle
 
@@ -122,7 +124,7 @@ def run_approximated_Iolts_Lstar(
         if h_minus_cex and print_level > 1:
             print(cause)
 
-        h_plus_cex, cause = [], None #oracle.find_safety_cex(h_plus)
+        h_plus_cex, cause = oracle.find_safety_cex(h_plus) if enforce_model_checking_h_plus else [], None
         if h_plus_cex and print_level > 1:
             print(cause)
 
@@ -149,6 +151,13 @@ def run_approximated_Iolts_Lstar(
     total_time = round(time.time() - start_time, 2)
     learning_time = round(learning_time, 2)
     checking_time = round(total_time - learning_time, 2)
+
+    if not enforce_quiescence_self_loops:
+        h_star_with_self_loops = observation_table.gen_hypothesis_star(True)
+        _, cause = oracle.find_safety_cex()
+        if cause is None:
+            h_star = h_star_with_self_loops
+
     info = {
         'learning_rounds': learning_rounds,
         'automaton_size_h_minus': len(h_minus.states),
@@ -158,6 +167,7 @@ def run_approximated_Iolts_Lstar(
         's_size': len(observation_table.S),
         'e_size': len(observation_table.E),
         'quiescence_reduced': not is_reducible,
+
 
         'total_time': total_time,
         'learning_time': learning_time,
@@ -172,6 +182,7 @@ def run_approximated_Iolts_Lstar(
         'steps_completeness': sul.num_completeness_steps,
         'listens_completeness': sul.num_completeness_listens,
         'completeness_certainty_probability': sul.completeness_certainty_threshold,
+        'debug': cause
     }
 
     print_learning_info_approximate_lstar(info)

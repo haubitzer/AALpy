@@ -234,19 +234,14 @@ class ApproximatedIoltsObservationTable:
         Returns:
 
         """
-        self.S = sorted(self.S, key=len)
-        self.E = sorted(self.E, key=len)
-
-        def reduce_trace(trace) -> tuple:
-            return tuple([letter for letter in trace if letter != QUIESCENCE])
-
-        quiescence_traces_map = dict()
-
         self.cache_for_row.clear()
         self.cache_for_row_plus.clear()
 
         update_s_set = s_set if s_set is not None else list(self.S) + list(self.s_dot_a())
         update_e_set = e_set if e_set is not None else self.E
+
+        update_s_set.sort(key=len)
+        update_e_set.sort(key=len)
 
         for s, e in itertools.product(update_s_set, update_e_set):
             if s not in self.T:
@@ -256,12 +251,6 @@ class ApproximatedIoltsObservationTable:
             if e not in self.T[s]:
                 self.T[s][e] = set()
                 self.T_completed[s][e] = False
-
-            reduced_trace = reduce_trace(s + e)
-            if reduced_trace not in quiescence_traces_map:
-                quiescence_traces_map[reduced_trace] = set()
-
-            quiescence_traces_map[reduced_trace].add((s, e))
 
         for s, e in itertools.product(update_s_set, update_e_set):
             if not self.is_defined(s + e):
@@ -275,7 +264,7 @@ class ApproximatedIoltsObservationTable:
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
             if len(s + e) > 0 and tuple([(s + e)[-1]]) == QUIESCENCE_TUPLE:
-                self.T[s][e].add(QUIESCENCE)
+                self.T[s][e] = {QUIESCENCE}
                 self.T_completed[s][e] = True
                 continue
 
@@ -285,6 +274,7 @@ class ApproximatedIoltsObservationTable:
             enable_quiescence = QUIESCENCE in self.T[longest_prefix][EMPTY_WORD]
             prefix_completed = self.T_completed[s][EMPTY_WORD]
 
+            # TODO check what happens with non defined cells, because of quiescence * quiescence
             if ends_with_quiescence and enable_quiescence and prefix_completed:
                 self.T[s][e] = self.T[longest_prefix][e]
                 if self.T_completed[longest_prefix][e]:
@@ -295,27 +285,11 @@ class ApproximatedIoltsObservationTable:
             if self.sul.query(s + e, False) is None:
                 continue
 
-
             self.T[s][e].update(self.sul.get_cache_elements(s + e))
             self.T_completed[s][e] = self.sul.completeness_query(s + e, self.T[s][e])
-            # self.T[s][e].update(self.sul.get_cache_elements(self.sul.reduce_trace(s + e)))
-
-
-            # self.T[s][e].update(self.sul.get_cache_elements(self.sul.reduce_trace(s + e)))
-            # self.T_completed[s][e] = self.sul.completeness_query(self.sul.reduce_trace(s + e), self.T[s][e])
-
-            #if self.sul.completeness_query(s + e, self.T[s][e]) != self.sul.completeness_query(self.sul.reduce_trace(s + e), self.T[s][e]):
-            #    print(f"{s} + {e} => {self.row_plus(s)[e]} \n"
-            #          f"{self.sul.reduce_trace(s + e)} >>> {self.sul.get_cache_elements(self.sul.reduce_trace(s + e))}")
-            #    foo = 1
-
-            # self.T[s][e].update(self.sul.get_cache_elements(self.sul.reduce_trace(s + e)))
-            # self.T_completed[s][e] = self.sul.completeness_query(self.sul.reduce_trace(s + e), self.T[s][e])
-
-        for s, e in itertools.product(update_s_set, update_e_set):
-            self.T[s][e] = set([elem for elem in self.T[s][e] if elem is not None])
-            self.T[s].update(dict(sorted(self.T[s].items())))
-            self.T_completed[s].update(dict(sorted(self.T_completed[s].items())))
+            if None in self.T[s][e]:
+                raise Exception(
+                    f"[Error] Found None in T(s)(e) this should never happen. \n {s} {e} => {self.row_plus(s)[e]}")
 
     def get_row_key(self, s) -> str:
         return str(sorted(self.row(s).items()))
@@ -363,7 +337,7 @@ class ApproximatedIoltsObservationTable:
 
         return automaton
 
-    def gen_hypothesis_plus(self, with_chaos_state: bool = True) -> IoltsMachine:
+    def gen_hypothesis_plus(self, with_chaos_state: bool = True, with_quiescence_self_loops: bool = False) -> IoltsMachine:
         state_distinguish = dict()
         states_dict = dict()
         initial_state = None
@@ -404,8 +378,10 @@ class ApproximatedIoltsObservationTable:
                 if self.cell_contains(s, EMPTY_WORD, output):
                     row = self.get_row_plus_key(s + output_tuple)
                     if output_tuple == QUIESCENCE_TUPLE:
-                        state.add_quiescence(state)
-                        # state.add_quiescence(state_distinguish.get(row))
+                        if with_quiescence_self_loops:
+                            state.add_quiescence(state)
+                        else:
+                            state.add_quiescence(state_distinguish.get(row))
                     else:
                         state.add_output(output, state_distinguish.get(row))
                 elif not self.row_plus(s)[EMPTY_WORD][1] and with_chaos_state:
@@ -423,8 +399,8 @@ class ApproximatedIoltsObservationTable:
 
         return automaton
 
-    def gen_hypothesis_star(self) -> IoltsMachine:
-        automaton = self.gen_hypothesis_plus(False)
+    def gen_hypothesis_star(self, with_quiescence_self_loops: bool = False) -> IoltsMachine:
+        automaton = self.gen_hypothesis_plus(False, with_quiescence_self_loops)
 
         states_to_remove = Counter()
 

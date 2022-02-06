@@ -132,6 +132,7 @@ def print_learning_info_approximate_lstar(info: dict):
     print(' # Steps                 : {}'.format(info['steps_completeness']))
     print(' # Listens               : {}'.format(info['listens_completeness']))
     print(' # Certainty probability : {}'.format(info['completeness_certainty_probability']))
+    print('Debug : {}'.format(info['debug']))
     print('-----------------------------------')
 
 

@@ -2,6 +2,8 @@ from collections import Counter
 from random import choice
 from typing import Optional
 
+from sortedcontainers import SortedSet
+
 from aalpy.automata import Dfa, MealyMachine, MooreMachine, Onfsm, Mdp, StochasticMealyMachine, IoltsMachine, \
     MarkovChain, QUIESCENCE
 from aalpy.base import SUL
@@ -228,6 +230,7 @@ class IoltsMachineSUL(SUL):
 
         output = self._query_with_step(word)
         self._cache_update(word, output)
+        # Note: This is for some reason a bad idea
         # self._cache_update(self.reduce_trace(word), output)
 
         return output
@@ -241,8 +244,7 @@ class IoltsMachineSUL(SUL):
         if not in_cache:
             return set()
 
-        outputs = sorted(counter.elements(), key=lambda x: x or "")
-        return set(outputs)
+        return set(SortedSet(counter.elements()))
 
     def _cache_update(self, word, output):
         if word not in self.cache.keys():
