@@ -178,11 +178,12 @@ class StochasticMealySUL(SUL):
 
 
 class IoltsMachineSUL(SUL):
-    def __init__(self, iolts: IoltsMachine, query_certainty_threshold: float = 0.99, completeness_certainty_threshold: float = 0.99):
+    def __init__(self, iolts: IoltsMachine, query_certainty_threshold: float = 0.99, completeness_certainty_threshold: float = 0.99, enforce_threshold: bool = True):
         super().__init__()
         self.iolts = iolts
         self.query_certainty_threshold = query_certainty_threshold
         self.completeness_certainty_threshold = completeness_certainty_threshold
+        self.enforce_threshold = enforce_threshold
 
         self.cache = dict()
         self.num_listens = 0
@@ -312,6 +313,7 @@ class IoltsMachineSUL(SUL):
             if self.is_input(letter):
                 self.step(letter)
                 if not self.has_accepted_input():
+                    # todo add new output here: "NOT_ACCEPTED"
                     output = self.listen()
                     self._cache_update(cache_prefix + word[:i], output)
                     return False
@@ -337,14 +339,19 @@ class IoltsMachineSUL(SUL):
         saved_num_queries = self.num_queries
         saved_num_listens = self.num_listens
 
-        is_complete = True
-        while is_complete and not self.completeness_threshold_reached(word):
+        reached_threshold = self.completeness_threshold_reached(word)
+        overlapping_sets = observed_set.issuperset(self.get_cache_elements(word))
+        is_complete = overlapping_sets and reached_threshold
+
+        while self.enforce_threshold and not self.completeness_threshold_reached(word):
             if self.query(word, False) in observed_set:
+                is_complete = True
                 continue
             else:
                 is_complete = False
+                break
 
-        self.num_completeness_queries += self.num_queries - saved_num_queries
+        self.num_completeness_queries += 1
         self.num_queries = saved_num_queries
         self.num_completeness_steps += self.num_steps - saved_num_steps
         self.num_steps = saved_num_steps

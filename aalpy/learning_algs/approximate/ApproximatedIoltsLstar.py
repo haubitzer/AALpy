@@ -23,7 +23,7 @@ def run_approximated_Iolts_Lstar(
         oracle,
         enforce_quiescence_reduced: bool = True,
         enforce_quiescence_self_loops: bool = True,
-        enforce_model_checking_h_plus: bool = False,
+        enforce_model_checking_h_plus: bool = True,
         print_level=2,
 ) -> tuple[IoltsMachine, IoltsMachine, IoltsMachine, object]:
     """ """
@@ -66,7 +66,10 @@ def run_approximated_Iolts_Lstar(
             stabilizing_rounds = 0
             while not (is_closed and is_consistent):
                 stabilizing_rounds += 1
-                if not (stabilizing_rounds < 100):
+
+                # observation_table.remove_redundant_rows()
+
+                if not (stabilizing_rounds < 500):
                     raise Exception("Stabilizing rounds hit 100")
 
                 is_closed, rows_to_close = observation_table.is_globally_closed()
@@ -118,19 +121,31 @@ def run_approximated_Iolts_Lstar(
         h_plus = observation_table.gen_hypothesis_plus(False)
         h_star = observation_table.gen_hypothesis_star(enforce_quiescence_self_loops)
 
+        h_minus_cex = []
+        h_plus_cex = []
+        h_star_cex = []
+
         oracle: ModelCheckerPrecisionOracle
 
         h_minus_cex, cause = oracle.find_liveness_cex(h_minus)
         if h_minus_cex and print_level > 1:
             print(cause)
 
-        h_plus_cex, cause = oracle.find_safety_cex(h_plus) if enforce_model_checking_h_plus else [], None
-        if h_plus_cex and print_level > 1:
-            print(cause)
+        try:
+            h_star_cex_liveness, cause = oracle.find_liveness_cex(h_star)
+            if h_star_cex_liveness and print_level > 1:
+                print(cause)
+            h_star_cex_safety, cause = oracle.find_safety_cex(h_star)
+            if h_star_cex_safety and print_level > 1:
+                print(cause)
 
-        h_star_cex, cause = oracle.find_safety_cex(h_star)
-        if h_star_cex and print_level > 1:
-            print(cause)
+            h_star_cex = h_star_cex_liveness + h_star_cex_safety
+        except Exception as e:
+            print(f"[ERROR] H* failed: \n {e}")
+
+            h_plus_cex, cause = oracle.find_safety_cex(h_plus)
+            if h_plus_cex and print_level > 1:
+                print(cause)
 
         all_counter_examples = sorted(
             [list(unique_cex) for unique_cex in SortedSet(tuple(cex) for cex in h_minus_cex + h_plus_cex + h_star_cex)])
@@ -143,6 +158,7 @@ def run_approximated_Iolts_Lstar(
                        cex_cache_longest_prefix,
                        cex_cache_prefix,
                        cex_cache_suffix):
+            print(h_star)
             raise Exception("Error! no new counter example was found that would improve the observation table!")
 
     if print_level > 3:
@@ -154,7 +170,7 @@ def run_approximated_Iolts_Lstar(
 
     if not enforce_quiescence_self_loops:
         h_star_with_self_loops = observation_table.gen_hypothesis_star(True)
-        _, cause = oracle.find_safety_cex()
+        _, cause = oracle.find_safety_cex(h_star_with_self_loops)
         if cause is None:
             h_star = h_star_with_self_loops
 
@@ -167,7 +183,6 @@ def run_approximated_Iolts_Lstar(
         's_size': len(observation_table.S),
         'e_size': len(observation_table.E),
         'quiescence_reduced': not is_reducible,
-
 
         'total_time': total_time,
         'learning_time': learning_time,

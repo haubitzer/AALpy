@@ -47,8 +47,8 @@ class ApproximatedIoltsObservationTable:
             return True
 
         for prefix in all_prefixes(word):
-            if prefix in self.cache_for_is_defined:
-                continue
+            #if prefix in self.cache_for_is_defined:
+            #    continue
 
             if self._prefix_is_defined(prefix):
                 self.cache_for_is_defined.add(prefix)
@@ -89,7 +89,7 @@ class ApproximatedIoltsObservationTable:
         return is_defined
 
     def row(self, s):
-        if s in self.cache_for_row:
+        if s in self.cache_for_row and False:
             return self.cache_for_row[s]
 
         result = SortedDict(SortedSet)
@@ -100,7 +100,7 @@ class ApproximatedIoltsObservationTable:
         return result
 
     def row_plus(self, s):
-        if s in self.cache_for_row_plus:
+        if s in self.cache_for_row_plus and False:
             return self.cache_for_row_plus[s]
 
         result = SortedDict(tuple)
@@ -117,6 +117,18 @@ class ApproximatedIoltsObservationTable:
         return (skip_row_equals or self.row_equals(s1, s2)) and all(
             self.T_completed[s1][e] == self.T_completed[s2][e] for e in self.E)
 
+    def remove_prefix(self, prefix):
+        self.S = [s for s in self.S if prefix not in all_prefixes(s)]
+
+    def remove_redundant_rows(self):
+        for s1, s2 in itertools.product(self.S, self.S):
+            if s1 != s2 and self.row_plus_equals(s1, s2):
+                self.remove_prefix(s2)
+                return True
+
+        return False
+
+
     def cell_contains(self, s, e, out):
         if s not in self.T:
             return False
@@ -131,7 +143,13 @@ class ApproximatedIoltsObservationTable:
             if not self.is_defined(s1 + a):
                 continue
 
+            # Note that should help to have more differ rows in S set
+            if not any(self.row_equals(s1 + a, s2) for s2 in self.S):
+                rows_to_close.add(s1 + a)
+                break
+
             if not any(self.row_plus_equals(s1 + a, s2) for s2 in self.S):
+                # improve precision here to resolve non-closed rows
                 rows_to_close.add(s1 + a)
                 break
 
@@ -410,7 +428,8 @@ class ApproximatedIoltsObservationTable:
                 for letter in trace:
                     automaton.step_to(letter)
 
-                states_to_remove.update([automaton.current_state.state_id])
+                if not automaton.current_state.get_diff_state_transitions():
+                    states_to_remove.update([automaton.current_state.state_id])
 
         for (state_id, _) in states_to_remove.items():
             automaton.remove_state(automaton.get_state_by_id(state_id))

@@ -10,18 +10,19 @@ from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 
 # SETTINGS
-number_of_runs = 20
-query_certainty_threshold = 0.99
-completeness_certainty_threshold = 0.99
-enforce_quiescence_reduced = True
-enforce_quiescence_self_loops = True
+number_of_runs = 3
+query_certainty_threshold = 0.990
+completeness_certainty_threshold = 0.990
+enforce_quiescence_reduced = False
+enforce_quiescence_self_loops = False
+enforce_threshold = True
 
 # Note
 
 
 def get_non_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
     specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/car_alarm_system/02_car_alarm.dot", "iolts")
-    sul = IoltsMachineSUL(specification, query_certainty_threshold, completeness_certainty_threshold)
+    sul = IoltsMachineSUL(specification, query_certainty_threshold, completeness_certainty_threshold, enforce_threshold=enforce_threshold)
 
     checker = Mcrl2ModelChecker(sul)
     checker.add_liveness_property("./DotModels/Iolts/car_alarm_system/liveness_property.mcf", [])
@@ -84,7 +85,7 @@ def get_tftp() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
 
 
 def run():
-    sul, checker = get_tftp()
+    sul, checker = get_det_car_alarm()
     oracle = ModelCheckerPrecisionOracle(sul, checker)
     return run_approximated_Iolts_Lstar(
         sul.iolts.get_input_alphabet(),
@@ -109,14 +110,16 @@ def sava_results_as_csv(data):
 def main():
     data = []
     for i in range(1, number_of_runs + 1):
-        print(f"''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' RUN: {1}")
-        try:
-            _, _, h_star, info = run()
-            print(h_star)
-            info["run"] = f"{i} / {number_of_runs}"
-            data.append(info)
-        except Exception as e:
-            print(f"[ERROR] Throw exception: \n {e}")
+        print(f"''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' RUN: {i}")
+        #try:
+        h_minus, h_plus, h_star, info = run()
+        print(h_minus)
+        print(h_plus)
+        print(h_star)
+        info["run"] = f"{i} / {number_of_runs}"
+        data.append(info)
+        #except Exception as e:
+        # print(f"[ERROR] Throw exception: \n {e}")
 
     sava_results_as_csv(data)
 
