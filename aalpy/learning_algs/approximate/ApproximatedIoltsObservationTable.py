@@ -47,8 +47,8 @@ class ApproximatedIoltsObservationTable:
             return True
 
         for prefix in all_prefixes(word):
-            #if prefix in self.cache_for_is_defined:
-            #    continue
+            if prefix in self.cache_for_is_defined:
+                continue
 
             if self._prefix_is_defined(prefix):
                 self.cache_for_is_defined.add(prefix)
@@ -89,7 +89,7 @@ class ApproximatedIoltsObservationTable:
         return is_defined
 
     def row(self, s):
-        if s in self.cache_for_row and False:
+        if s in self.cache_for_row:
             return self.cache_for_row[s]
 
         result = SortedDict(SortedSet)
@@ -100,7 +100,7 @@ class ApproximatedIoltsObservationTable:
         return result
 
     def row_plus(self, s):
-        if s in self.cache_for_row_plus and False:
+        if s in self.cache_for_row_plus:
             return self.cache_for_row_plus[s]
 
         result = SortedDict(tuple)
