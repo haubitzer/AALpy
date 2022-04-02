@@ -89,7 +89,8 @@ class Mcrl2Converter:
         if transitions:
             return f"{state.state_id} = {' + '.join(transitions)}; {os.linesep}"
         else:
-            return ""
+            # maybe we need to add here a chaos state
+            return f"{state.state_id} = {QUIESCENCE} . {state.state_id}; {os.linesep}"
 
     def _init(self) -> str:
         return f"init{os.linesep} {self.model.initial_state.state_id};{os.linesep}"
@@ -103,6 +104,7 @@ class Mcrl2Interface:
     def __init__(self, model: IoltsMachine, sul):
         self.main_folder = f"mcrl2_data-{time.time()}"
         self.model_as_mcrl2 = Mcrl2Converter(model, sul).convert()
+        self.model = model
 
     def holds(self, prop: str) -> Union[tuple[bool, None], tuple[bool, list[str]]]:
         name = Path(prop).stem

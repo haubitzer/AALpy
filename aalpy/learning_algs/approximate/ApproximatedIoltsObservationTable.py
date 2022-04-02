@@ -46,15 +46,10 @@ class ApproximatedIoltsObservationTable:
         if word in self.cache_for_is_defined:
             return True
 
-        for prefix in all_prefixes(word):
-            if prefix in self.cache_for_is_defined:
-                continue
+        if not self._prefix_is_defined(word):
+            return False
 
-            if self._prefix_is_defined(prefix):
-                self.cache_for_is_defined.add(prefix)
-            else:
-                return False
-
+        self.cache_for_is_defined.add(word)
         return True
 
     def _prefix_is_defined(self, s: tuple):
@@ -120,6 +115,11 @@ class ApproximatedIoltsObservationTable:
     def remove_prefix(self, prefix):
         self.S = [s for s in self.S if prefix not in all_prefixes(s)]
 
+    def print_row(self, s):
+        for i, e in enumerate(self.E):
+            print(f"{i}: {e} => {list(self.row_plus(s)[e][0])} | {self.row_plus(s)[e][1]}")
+        print("--------------------------------------------")
+
     def remove_redundant_rows(self):
         for s1, s2 in itertools.product(self.S, self.S):
             if s1 != s2 and self.row_plus_equals(s1, s2):
@@ -131,9 +131,9 @@ class ApproximatedIoltsObservationTable:
 
     def cell_contains(self, s, e, out):
         if s not in self.T:
-            return False
+            return None
         if e not in self.T[s]:
-            return False
+            return None
         return out in self.T[s][e]
 
     def is_globally_closed(self):
@@ -214,7 +214,7 @@ class ApproximatedIoltsObservationTable:
                         if self.row_plus_equals(s, s1 + a):
                             s_prime_1 = s
                     for s in self.S:
-                        if self.row_plus_equals(s, s2 + a) and not self.row_plus_equals(s, s_prime_1):
+                        if self.row_plus_equals(s, s2 + a) and (s_prime_1 and not self.row_plus_equals(s, s_prime_1)):
                             s_prime_2 = s
 
                     if (
@@ -271,13 +271,11 @@ class ApproximatedIoltsObservationTable:
                 self.T_completed[s][e] = False
 
         for s, e in itertools.product(update_s_set, update_e_set):
-            if not self.is_defined(s + e):
+            if not self.is_defined(s):
                 continue
 
             # If cell is marked as completed the loop can continue
             if self.T_completed[s][e]:
-                # TODO ADD NOTE TO THESIS:
-                # updating cell after completed mark creates huge problems, we can not resolve that.
                 continue
 
             # if a trace ends with quiescence only an input can enable an value in T, so we mark the cell as completed
@@ -397,7 +395,8 @@ class ApproximatedIoltsObservationTable:
                     row = self.get_row_plus_key(s + output_tuple)
                     if output_tuple == QUIESCENCE_TUPLE:
                         if with_quiescence_self_loops:
-                            state.add_quiescence(state)
+                            # quiescence loop is added by default
+                            pass
                         else:
                             state.add_quiescence(state_distinguish.get(row))
                     else:
@@ -432,6 +431,6 @@ class ApproximatedIoltsObservationTable:
                     states_to_remove.update([automaton.current_state.state_id])
 
         for (state_id, _) in states_to_remove.items():
-            automaton.remove_state(automaton.get_state_by_id(state_id))
+            automaton.remove_state_connected_by_input(automaton.get_state_by_id(state_id))
 
         return automaton

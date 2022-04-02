@@ -1,6 +1,6 @@
 digraph carAlarmSystem {
 s0 [label=s0];
-s1;
+s1 [label=s1];
 s2 [label=s2];
 s3 [label=s3];
 s4 [label=s4];

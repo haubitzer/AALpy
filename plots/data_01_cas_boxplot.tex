@@ -1,0 +1,169 @@
+% This file was created with tikzplotlib v0.10.1.
+\begin{tikzpicture}
+
+\definecolor{darkgray176}{RGB}{176,176,176}
+
+\begin{axis}[
+tick align=outside,
+tick pos=left,
+title={\SUL interaction to learn a correct
+Non-deterministic Model of the Car Alarm System},
+x grid style={darkgray176},
+xlabel={Certainty and Failure Rate},
+xmin=0.5, xmax=4.5,
+xtick style={color=black},
+xtick={1,2,3,4},
+xticklabels={
+  90\% 
+(Failed 4/15),
+  95\%
+(Failed 7/15),
+  99\%
+(Failed 0/20),
+  99.999\%
+(Failed 0/15)
+},
+y grid style={darkgray176},
+ylabel={# of interaction with \SUL},
+ymin=7762.7, ymax=92843.3,
+ytick style={color=black}
+]
+\addplot [black]
+table {%
+0.775 23508
+1.225 23508
+1.225 30994
+0.775 30994
+0.775 23508
+};
+\addplot [black]
+table {%
+1 23508
+1 16685
+};
+\addplot [black]
+table {%
+1 30994
+1 35023
+};
+\addplot [black]
+table {%
+0.8875 16685
+1.1125 16685
+};
+\addplot [black]
+table {%
+0.8875 35023
+1.1125 35023
+};
+\addplot [black, mark=o, mark size=3, mark options={solid,fill opacity=0}, only marks]
+table {%
+1 53353
+};
+\addplot [black]
+table {%
+1.775 24000
+2.225 24000
+2.225 40611.25
+1.775 40611.25
+1.775 24000
+};
+\addplot [black]
+table {%
+2 24000
+2 11630
+};
+\addplot [black]
+table {%
+2 40611.25
+2 43734
+};
+\addplot [black]
+table {%
+1.8875 11630
+2.1125 11630
+};
+\addplot [black]
+table {%
+1.8875 43734
+2.1125 43734
+};
+\addplot [black]
+table {%
+2.775 31705.5
+3.225 31705.5
+3.225 39036.75
+2.775 39036.75
+2.775 31705.5
+};
+\addplot [black]
+table {%
+3 31705.5
+3 21164
+};
+\addplot [black]
+table {%
+3 39036.75
+3 49037
+};
+\addplot [black]
+table {%
+2.8875 21164
+3.1125 21164
+};
+\addplot [black]
+table {%
+2.8875 49037
+3.1125 49037
+};
+\addplot [black]
+table {%
+3.775 31212
+4.225 31212
+4.225 56059.5
+3.775 56059.5
+3.775 31212
+};
+\addplot [black]
+table {%
+4 31212
+4 22887
+};
+\addplot [black]
+table {%
+4 56059.5
+4 88976
+};
+\addplot [black]
+table {%
+3.8875 22887
+4.1125 22887
+};
+\addplot [black]
+table {%
+3.8875 88976
+4.1125 88976
+};
+\addplot [black]
+table {%
+0.775 27043
+1.225 27043
+};
+\addplot [black]
+table {%
+1.775 30318
+2.225 30318
+};
+\addplot [black]
+table {%
+2.775 35869.5
+3.225 35869.5
+};
+\addplot [black]
+table {%
+3.775 43697
+4.225 43697
+};
+\end{axis}
+
+\end{tikzpicture}

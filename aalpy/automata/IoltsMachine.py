@@ -481,14 +481,8 @@ class IoltsMachine(Automaton):
                 self.states.remove(destination)
                 self.remove_not_connected_states()
 
-    def remove_state(self, state_to_remove):
+    def remove_state_connected_by_input(self, state_to_remove):
         for state, letter in itertools.product(self.states, self.get_input_alphabet()):
             state.remove_input(letter,  state_to_remove)
-
-        for state, letter in itertools.product(self.states, self.get_output_alphabet()):
-            state.remove_output(letter,  state_to_remove)
-
-        for state in self.states:
-            state.remove_quiescence(state_to_remove)
 
         self.remove_not_connected_states()

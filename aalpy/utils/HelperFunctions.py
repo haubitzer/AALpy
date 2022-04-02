@@ -125,7 +125,7 @@ def print_learning_info_approximate_lstar(info: dict):
     print('Learning Algorithm')
     print(' # Membership Queries    : {}'.format(info['queries_learning']))
     print(' # Steps                 : {}'.format(info['steps_learning']))
-    print(' # Listens               : {}'.format(info['listens_leaning']))
+    print(' # Listens               : {}'.format(info['listens_learning']))
     print(' # Certainty probability : {}'.format(info['query_certainty_probability']))
     print('Completeness Query')
     print(' # Completeness Queries  : {}'.format(info['queries_completeness']))
