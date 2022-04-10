@@ -6,18 +6,18 @@ from aalpy.learning_algs.approximate.ApproximatedIoltsLstar import run_approxima
 from aalpy.learning_algs.approximate.PrecisionOracle import ModelCheckerPrecisionOracle
 from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
-specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_client/00_client.dot", "iolts")
+specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_download/00_download.dot", "iolts")
 
 print(specification)
 
 sul = IoltsMachineSUL(specification, 0.90, 0.90)
 
 checker = Mcrl2ModelChecker(sul)
-checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',),('!DATA',)])
-checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_1.mcf", [])
-checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
-checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_3.mcf", [])
-checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_4.mcf", [])
+checker.add_liveness_property("./DotModels/Iolts/tftp_download/liveness_property.mcf", [('?ACK',),('!DATA',)])
+checker.add_safety_property("./DotModels/Iolts/tftp_download/01_requirement_1.mcf", [])
+checker.add_safety_property("./DotModels/Iolts/tftp_download/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
+checker.add_safety_property("./DotModels/Iolts/tftp_download/01_requirement_3.mcf", [])
+checker.add_safety_property("./DotModels/Iolts/tftp_download/01_requirement_4.mcf", [])
 
 sul_holds, data = checker.check_safety_properties(specification)
 

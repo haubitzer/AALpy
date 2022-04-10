@@ -10,38 +10,22 @@ s7 [label=s7];
 s8 [label=s8];
 s9 [label=s9];
 s10 [label=s10];
-s11 [label=s11];
-
 s0 -> s1  [label="?ACK"];
 s0 -> s2  [label="?GET"];
-
 s1 -> s0  [label="!ERROR"];
-
 s2 -> s3  [label="!DATA"];
 s2 -> s4  [label="!ERROR"];
-
 s3 -> s5  [label="?ACK"];
-
 s4 -> s6  [label="?ACK"];
-
 s5 -> s7  [label="!DATA"];
 s5 -> s4  [label="!TIMEOUT"];
-
 s6 -> s4  [label="!TIMEOUT"];
-
 s7 -> s8  [label="?ACK"];
-
 s8 -> s9  [label="!DATA"];
 s8 -> s4  [label="!TIMEOUT"];
-
-
 s9 -> s10  [label="?ACK"];
-
-s10 -> s11  [label="!FINISHED"];
-
-s11 -> s4  [label="!TIMEOUT"];
-s11 -> s4  [label="!ERROR"];
-
+s10 -> s4  [label="!TIMEOUT"];
+s10 -> s4  [label="!ERROR"];
 __start0 [label="", shape=none];
 __start0 -> s0  [label=""];
 }

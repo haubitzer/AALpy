@@ -146,10 +146,19 @@ class Mcrl2Interface:
         visited = set()
         automaton: IoltsMachine = load_automaton_from_file(path, "iolts")
 
+        max_self_loop = len(automaton.get_input_alphabet())
+
         while True:
             visited.add(automaton.initial_state)
 
             letters, states = automaton.random_unroll_step()
+
+            if not automaton.current_state.get_diff_state_transitions():
+                max_self_loop -= 1
+
+            if max_self_loop == 0:
+                return trace
+
 
             if letters:
                 trace.extend(letters)

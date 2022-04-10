@@ -34,10 +34,23 @@ class ApproximatedIoltsObservationTable:
         self.A = self.A_input + self.A_output + [QUIESCENCE_TUPLE]
 
         self.S = list()
-        self.S_dot_A = []
         self.E = []
         self.T = dict(dict())
         self.T_completed = dict(dict())
+
+        self.S.append(EMPTY_WORD)
+        self.E.append(EMPTY_WORD)
+        
+    def clear(self):
+        self.cache_for_is_defined.clear()
+        self.cache_for_row.clear()
+        self.cache_for_row_plus.clear()
+        self.S.clear()
+        self.E.clear()
+        self.T.clear()
+        self.T_completed.clear()
+        
+        self.sul.cache.clear()
 
         self.S.append(EMPTY_WORD)
         self.E.append(EMPTY_WORD)
@@ -83,7 +96,7 @@ class ApproximatedIoltsObservationTable:
 
         return is_defined
 
-    def row(self, s):
+    def row(self, s) -> SortedDict:
         if s in self.cache_for_row:
             return self.cache_for_row[s]
 
@@ -416,7 +429,52 @@ class ApproximatedIoltsObservationTable:
 
         return automaton
 
+    def _gen_hypothesis_star(self, with_quiescence_self_loops: bool = False) -> IoltsMachine:
+        state_distinguish = dict()
+        states_dict = dict()
+        initial_state = None
+
+        # create states based on S set
+        for i, s in enumerate(self.S):
+            state = IoltsState(f"s{i}")
+            state.prefix = s
+            states_dict[s] = state
+            state_distinguish[self.get_row_plus_key(s)] = state
+
+            if s == EMPTY_WORD:
+                initial_state = state
+
+        # add transitions based on extended S set
+        for s in self.S:
+            state = states_dict[s]
+            for i in self.A_input:
+                if any(cell for cell in self.row(s + i).values()):
+                    row = self.get_row_plus_key(s + i)
+                    state.add_input(i[0], state_distinguish.get(row))
+
+            for output_tuple in self.A_output + [QUIESCENCE_TUPLE]:
+                output = output_tuple[0]
+
+                if self.cell_contains(s, EMPTY_WORD, output):
+                    row = self.get_row_plus_key(s + output_tuple)
+                    if output_tuple == QUIESCENCE_TUPLE and not with_quiescence_self_loops:
+                        state.add_quiescence(state_distinguish.get(row))
+                    elif output_tuple in self.A_output:
+                        state.add_output(output, state_distinguish.get(row))
+
+        automaton = IoltsMachine(
+            initial_state,
+            list(states_dict.values()),
+        )
+
+        automaton.remove_not_connected_states()
+
+        return automaton
+
+
     def gen_hypothesis_star(self, with_quiescence_self_loops: bool = False) -> IoltsMachine:
+        return self._gen_hypothesis_star(with_quiescence_self_loops)
+
         automaton = self.gen_hypothesis_plus(False, with_quiescence_self_loops)
 
         states_to_remove = Counter()

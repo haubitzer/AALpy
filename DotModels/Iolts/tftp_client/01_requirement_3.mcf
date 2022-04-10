@@ -1,1 +1,0 @@
-[true* . in_ACK . (out_DATA | out_ERROR | out_TIMEOUT | out_FINISHED)] true

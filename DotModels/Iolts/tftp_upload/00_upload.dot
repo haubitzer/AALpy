@@ -1,0 +1,58 @@
+digraph learnedModel {
+s0 [label=s0];
+s1 [label=s1];
+s2 [label=s2];
+s3 [label=s3];
+s4 [label=s4];
+s5 [label=s5];
+s6 [label=s6];
+s7 [label=s7];
+s8 [label=s8];
+s9 [label=s9];
+s10 [label=s10];
+s11 [label=s11];
+s12 [label=s12];
+s13 [label=s13];
+
+
+s0 -> s2  [label="?PUT"];
+s0 -> s1  [label="?SEND"];
+
+
+s1 -> s0  [label="!ERROR"];
+
+s2 -> s4  [label="!ERROR"]
+s2 -> s3  [label="!ACK_RESP"];
+
+s3 -> s5  [label="?SEND"];
+
+s4 -> s6  [label="?SEND"];
+
+s5 -> s7  [label="!ACK_RESP"];
+
+s6 -> s4  [label="!TIMEOUT"];
+
+s7 -> s8  [label="?SEND"];
+s7 -> s9  [label="!TIMEOUT"];
+
+s8 -> s10  [label="!ACK_RESP"];
+s8 -> s4  [label="!TIMEOUT"];
+
+s9 -> s4  [label="!ERROR"];
+s9 -> s4  [label="!TIMEOUT"];
+
+s10 -> s11  [label="?SEND"];
+
+s11 -> s4  [label="!ERROR"];
+s11 -> s12  [label="!TIMEOUT"];
+
+s12 -> s13  [label="?SEND"];
+
+s13 -> s4  [label="!ACK_RESP"];
+s13 -> s4  [label="!ERROR"];
+s13 -> s4  [label="!TIMEOUT"];
+
+
+__start0 [label="", shape=none];
+__start0 -> s0  [label=""];
+}

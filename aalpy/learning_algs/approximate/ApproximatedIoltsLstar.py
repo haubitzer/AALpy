@@ -23,13 +23,14 @@ def run_approximated_Iolts_Lstar(
         oracle,
         enforce_quiescence_reduced: bool = True,
         enforce_quiescence_self_loops: bool = True,
-        enforce_model_checking_h_plus: bool = True,
+        enable_reset: bool = True,
         print_level=2,
 ) -> tuple[IoltsMachine, IoltsMachine, IoltsMachine, object]:
     """ """
     start_time = time.time()
     learning_time = 0
     learning_rounds = 0
+    number_of_resets = 0
 
     h_minus, h_plus, h_star = None, None, None
 
@@ -47,8 +48,8 @@ def run_approximated_Iolts_Lstar(
         learning_rounds += 1
         print("-------------------------------------------------------------------------------------------------------")
         print(f"Learning round: {learning_rounds}")
-        if not (learning_rounds < 25):
-            raise Exception("Leaning rounds hit 100")
+        if not (learning_rounds < 400):
+            raise Exception("Leaning rounds hit 400")
 
         if h_star:
             pass
@@ -87,8 +88,18 @@ def run_approximated_Iolts_Lstar(
                     added_e_set = extend_set(observation_table.E, e_for_consistency)
 
                     if not added_e_set:
-                        raise Exception(
-                            f"[ERROR] Could not resolve inconsistent observation table! May increase certainty_probability. \n {cause}")
+                        if enable_reset:
+                            print(f"[INFO] Could not resolve inconsistent observation table!")
+                            print("+++++ RESET ++++")
+                            number_of_resets += 1
+                            observation_table.clear()
+                            cex_cache_suffix.clear()
+                            cex_cache_prefix.clear()
+                            cex_cache_longest_prefix.clear()
+                            observation_table.update_obs_table()
+                            continue
+                        else:
+                            raise Exception(f"[ERROR] Could not resolve inconsistent observation table! May increase certainty_probability. \n {cause}")
 
                     if print_level > 1:
                         print(f"Consistent E set: {added_e_set}")
@@ -161,7 +172,17 @@ def run_approximated_Iolts_Lstar(
                        cex_cache_prefix,
                        cex_cache_suffix):
             print(h_star)
-            raise Exception("Error! no new counter example was found that would improve the observation table!")
+            if enable_reset:
+                print("[INFO] No new counter example was found that would improve the observation table!")
+                print("+++++ RESET ++++")
+                number_of_resets += 1
+                observation_table.clear()
+                cex_cache_suffix.clear()
+                cex_cache_prefix.clear()
+                cex_cache_longest_prefix.clear()
+                continue
+            else:
+                raise Exception("Error! no new counter example was found that would improve the observation table!")
 
     if print_level > 3:
         print_observation_table(observation_table, "approximated")
@@ -180,6 +201,7 @@ def run_approximated_Iolts_Lstar(
 
     info = {
         'learning_rounds': learning_rounds,
+        'number_of_resets': number_of_resets,
         'automaton_size_h_minus': len(h_minus.states),
         'automaton_size_h_plus': len(h_plus.states),
         'automaton_size_h_star': len(h_star.states),

@@ -10,7 +10,7 @@ from aalpy.utils import load_automaton_from_file, Mcrl2ModelChecker
 
 
 # SETTINGS
-number_of_runs = 10
+number_of_runs = 20
 query_certainty_threshold = 0.99999
 completeness_certainty_threshold = 0.99999
 enforce_quiescence_reduced = False
@@ -74,22 +74,31 @@ def get_det_car_alarm() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
     return sul, checker
 
 
-def get_tftp() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
-    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_client/00_client.dot", "iolts")
+def get_tftp_download() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
+    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_download/00_download.dot", "iolts")
     sul = IoltsMachineSUL(specification, query_certainty_threshold,completeness_certainty_threshold )
 
     checker = Mcrl2ModelChecker(sul)
-    checker.add_liveness_property("./DotModels/Iolts/tftp_client/liveness_property.mcf", [('?ACK',), ('!DATA',)])
-    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_1.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
-    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_3.mcf", [])
-    checker.add_safety_property("./DotModels/Iolts/tftp_client/01_requirement_4.mcf", [])
+    checker.add_liveness_property("./DotModels/Iolts/tftp_download/liveness_property.mcf", [('?ACK',), ('!DATA',)])
+    checker.add_safety_property("./DotModels/Iolts/tftp_download/01_requirement_2.mcf", [('?ACK',), ('!DATA',)])
+    checker.add_safety_property("./DotModels/Iolts/tftp_download/01_requirement_3.mcf", [])
 
     return sul, checker
 
 
+def get_tftp_upload() -> tuple[IoltsMachineSUL, Mcrl2ModelChecker]:
+    specification: IoltsMachine = load_automaton_from_file("DotModels/Iolts/tftp_upload/00_upload.dot", "iolts")
+    sul = IoltsMachineSUL(specification, query_certainty_threshold,completeness_certainty_threshold )
+
+    checker = Mcrl2ModelChecker(sul)
+    checker.add_liveness_property("./DotModels/Iolts/tftp_upload/liveness_property.mcf", [('?SEND',), ('!ACK_RESP',)])
+    checker.add_safety_property("./DotModels/Iolts/tftp_upload/01_requirement_2.mcf", [('?SEND',), ('!ACK_RESP',)])
+    checker.add_safety_property("./DotModels/Iolts/tftp_upload/01_requirement_3.mcf", [])
+
+    return sul, checker
+
 def run():
-    sul, checker = get_non_det_car_alarm()
+    sul, checker = get_tftp_download()
 
     oracle = ModelCheckerPrecisionOracle(sul, checker)
 
@@ -124,20 +133,34 @@ def sava_results_as_csv(data):
     pandas.set_option('display.max_columns', None)
     pandas.set_option('display.width', 1000)
 
+    print("####################################################")
+
     print("Total steps")
     total_steps = df["steps_learning"] + df["steps_completeness"]
-    print(total_steps)
+    print(list(total_steps))
     print(total_steps.describe())
 
     print("Total Listens")
     total_listens = df["listens_learning"] + df["listens_completeness"]
-    print(total_listens)
+    print(list(total_listens))
     print(total_listens.describe())
+
+    print("Output query interactions")
+    total_interactions =  df["steps_learning"] +  df["listens_learning"]
+    print(list(total_interactions))
+    print(total_interactions.describe())
+
+    print("Completeness interactions")
+    total_interactions =  df["steps_completeness"] +  df["listens_completeness"]
+    print(list(total_interactions))
+    print(total_interactions.describe())
 
     print("Total interactions")
     total_interactions = total_steps + total_listens
-    print(total_interactions)
+    print(list(total_interactions))
     print(total_interactions.describe())
+
+    print("####################################################")
 
     print(df)
 
@@ -158,5 +181,5 @@ def main():
     sava_results_as_csv(data)
 
 if __name__ == "__main__":
-    # random.seed(1)
+    random.seed(1)
     main()

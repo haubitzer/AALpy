@@ -99,7 +99,7 @@ class KWayTransitionCoverageEqOracle(Oracle):
 
         if self.optimize == 'steps':
             result = max(paths, key=lambda p: len(
-                p.kWayTransitions - covered) / len(p.steps))
+                p.kWayTransitions - covered) / len(p.learning))
 
         if self.optimize == 'queries':
             result = max(paths, key=lambda p: len(p.kWayTransitions - covered))

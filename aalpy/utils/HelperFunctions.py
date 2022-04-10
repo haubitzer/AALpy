@@ -111,6 +111,7 @@ def print_learning_info_approximate_lstar(info: dict):
     print('-----------------------------------')
     print('Learning Finished.')
     print('Learning Rounds          : {}'.format(info['learning_rounds']))
+    print('Number of Resets         : {}'.format(info['number_of_resets']))
     print('Number of states H-      : {}'.format(info['automaton_size_h_minus']))
     print('Number of states H+      : {}'.format(info['automaton_size_h_plus']))
     print('Number of states H*      : {}'.format(info['automaton_size_h_star']))
