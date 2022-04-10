@@ -104,6 +104,39 @@ def print_learning_info(info: dict):
     print('-----------------------------------')
 
 
+def print_learning_info_approximate_lstar(info: dict):
+    """
+    Print learning statistics.
+    """
+    print('-----------------------------------')
+    print('Learning Finished.')
+    print('Learning Rounds          : {}'.format(info['learning_rounds']))
+    print('Number of Resets         : {}'.format(info['number_of_resets']))
+    print('Number of states H-      : {}'.format(info['automaton_size_h_minus']))
+    print('Number of states H+      : {}'.format(info['automaton_size_h_plus']))
+    print('Number of states H*      : {}'.format(info['automaton_size_h_star']))
+    print('S size                   : {}'.format(info['s_size']))
+    print('E size                   : {}'.format(info['e_size']))
+    print('Cache size               : {}'.format(info['cache_size']))
+    print('Quiescence reduced       : {}'.format(info['quiescence_reduced']))
+    print('Time (in seconds)')
+    print('  Total                  : {}'.format(info['total_time']))
+    print('  Learning algorithm     : {}'.format(info['learning_time']))
+    print('  Conformance checking   : {}'.format(info['checking_time']))
+    print('Learning Algorithm')
+    print(' # Membership Queries    : {}'.format(info['queries_learning']))
+    print(' # Steps                 : {}'.format(info['steps_learning']))
+    print(' # Listens               : {}'.format(info['listens_learning']))
+    print(' # Certainty probability : {}'.format(info['query_certainty_probability']))
+    print('Completeness Query')
+    print(' # Completeness Queries  : {}'.format(info['queries_completeness']))
+    print(' # Steps                 : {}'.format(info['steps_completeness']))
+    print(' # Listens               : {}'.format(info['listens_completeness']))
+    print(' # Certainty probability : {}'.format(info['completeness_certainty_probability']))
+    print('Debug : {}'.format(info['debug']))
+    print('-----------------------------------')
+
+
 def print_observation_table(ot, table_type):
     """
     Prints the whole observation table.
@@ -111,13 +144,17 @@ def print_observation_table(ot, table_type):
     Args:
 
         ot: observation table
-        table_type: 'det', 'non-det', or 'stoc'
+        table_type: 'det', 'non-det', 'approximated, or 'stoc'
 
     """
+    table_completed = None
+
     if table_type == 'det':
         s_set, extended_s, e_set, table = ot.S, ot.s_dot_a(), ot.E, ot.T
     elif table_type == 'non-det':
         s_set, extended_s, e_set, table = ot.S, ot.S_dot_A, ot.E, ot.T
+    elif table_type == 'approximated':
+        s_set, extended_s, e_set, table, table_completed = ot.S, ot.s_dot_a(), ot.E, ot.T, ot.T_completed
     else:
         s_set, extended_s, e_set, table = ot.S, ot.get_extended_s(), ot.E, ot.T
 
@@ -129,6 +166,8 @@ def print_observation_table(ot, table_type):
         row = [str(s)]
         if table_type == 'det':
             row.extend(str(e) for e in table[s])
+        elif table_type == "approximated":
+            row.extend(str(table[s][e]) + "; " + str(table_completed[s][e]) for e in e_set)
         else:
             row.extend(str(table[s][e]) for e in e_set)
         s_rows.append(row)
@@ -136,8 +175,10 @@ def print_observation_table(ot, table_type):
         row = [str(s)]
         if table_type == 'det':
             row.extend(str(e) for e in table[s])
+        elif table_type == "approximated":
+            row.extend(str(table[s][e]) + "; " + str(table_completed[s][e]) for e in e_set)
         else:
-            row.extend(str(table[s][e]) for e in e_set)
+            row.extend(str(table[s][e])for e in e_set)
         extended_rows.append(row)
 
     table = [headers] + s_rows

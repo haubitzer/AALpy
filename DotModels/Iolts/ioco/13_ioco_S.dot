@@ -1,0 +1,20 @@
+digraph "../../DotModels/Iolts/ioco/12_ioco_S" {
+s0 [label=s0];
+s1 [label=s1];
+s3 [label=s3];
+s4 [label=s4];
+s5 [label=s5];
+s0 -> s0  [label=QUIESCENCE];
+s0 -> s5  [label="?b"];
+s0 -> s1  [label="?b"];
+s1 -> s3  [label="!x"];
+s1 -> s1  [label="?b"];
+s3 -> s3  [label=QUIESCENCE];
+s3 -> s3  [label="?b"];
+s4 -> s4  [label=QUIESCENCE];
+s4 -> s4  [label="?b"];
+s5 -> s4  [label="!y"];
+s5 -> s5  [label="?b"];
+__start0 [label="", shape=none];
+__start0 -> s0  [label=""];
+}

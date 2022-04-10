@@ -22,11 +22,14 @@ def longest_prefix_cex_processing(s_union_s_dot_a: list, cex: tuple, closedness=
         suffixes to add to the E set
 
     """
-    prefixes = s_union_s_dot_a
+    prefixes = sorted(s_union_s_dot_a, key=len)
     prefixes.reverse()
     trimmed_suffix = None
 
     for p in prefixes:
+        if not isinstance(p, list):
+            p = list(p)
+
         if p == cex[:len(p)]:
             trimmed_suffix = cex[len(p):]
             break

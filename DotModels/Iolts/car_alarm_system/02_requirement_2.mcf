@@ -1,0 +1,2 @@
+[true* . out_opticalAlarm_ON . true* . out_wait_30 . !(out_wait_270 || in_unlock)* . out_opticalAlarm_OFF] false
+

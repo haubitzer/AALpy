@@ -1,0 +1,38 @@
+digraph "../../DotModels/Iolts/01_iolts" {
+s0 [label=s0];
+s6 [label=s6];
+s12 [label=s12];
+s13 [label=s13];
+s16 [label=s16];
+s17 [label=s17];
+sc [label=sc];
+
+
+s0 -> s6  [label="?close"];
+s0 -> s17  [label="?lock"];
+
+s6 -> s0  [label="?open"];
+s6 -> s16  [label="?lock"];
+
+
+s16 -> s12  [label="!wait_20"];
+
+s12 -> s13  [label="!alarmArmed_ON"];
+
+s16 -> s6  [label="?unlock"];
+s16 -> s17  [label="?open"];
+
+s17 -> s0  [label="?unlock"];
+s17 -> s16  [label="?close"];
+sc -> sc  [label="!chaos"];
+sc -> sc [label="!alarmArmed_ON"];
+sc -> sc [label="?unlock"];
+sc -> sc [label="?close"];
+sc -> sc [label="?open"];
+sc -> sc [label="?lock"];
+sc -> sc [label="!wait_20"];
+
+
+__start0 [label="", shape=none];
+__start0 -> s0  [label=""];
+}

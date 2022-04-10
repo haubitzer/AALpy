@@ -1,0 +1,29 @@
+digraph "../../DotModels/Iolts/ioco/12_ioco_P" {
+s0 [label=s0];
+s1 [label=s1];
+s2 [label=s2];
+s3 [label=s3];
+s4 [label=s4];
+s5 [label=s5];
+s0 -> s0  [label=QUIESCENCE];
+s0 -> s2  [label="?a"];
+s0 -> s5  [label="?b"];
+s0 -> s1  [label="?b"];
+s1 -> s3  [label="!x"];
+s1 -> s1  [label="?b"];
+s1 -> s1  [label="?a"];
+s2 -> s2  [label=QUIESCENCE];
+s2 -> s2  [label="?a"];
+s2 -> s2  [label="?b"];
+s3 -> s3  [label=QUIESCENCE];
+s3 -> s3  [label="?a"];
+s3 -> s3  [label="?b"];
+s4 -> s4  [label=QUIESCENCE];
+s4 -> s4  [label="?a"];
+s4 -> s4  [label="?b"];
+s5 -> s4  [label="!y"];
+s5 -> s5  [label="?b"];
+s5 -> s5  [label="?a"];
+__start0 [label="", shape=none];
+__start0 -> s0  [label=""];
+}

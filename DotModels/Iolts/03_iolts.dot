@@ -1,0 +1,19 @@
+digraph "../../DotModels/Iolts/03_iolts" {
+s0 [label=s0];
+s1 [label=s1];
+s2 [label=s2];
+s3 [label=s3];
+s4 [label=s4];
+s0 -> s0  [label=QUIESCENCE];
+s0 -> s1  [label="?A"];
+s1 -> s2  [label="!1"];
+s1 -> s1  [label="?A"];
+s2 -> s2  [label=QUIESCENCE];
+s2 -> s3  [label="?A"];
+s3 -> s4  [label="!2"];
+s3 -> s3  [label="?A"];
+s4 -> s4  [label=QUIESCENCE];
+s4 -> s4  [label="?A"];
+__start0 [label="", shape=none];
+__start0 -> s0  [label=""];
+}
